@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "creatoros-agents"
+version = "0.1.0"
+description = "Reusable CreatorOS AI agents."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8.0",
+  "creatoros-ai-core",
+  "creatoros-database"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*"]

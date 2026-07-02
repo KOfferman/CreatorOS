@@ -1,0 +1,8 @@
+celery>=5.4.0
+pydantic-settings>=2.4.0
+sqlalchemy>=2.0.31
+pymysql>=1.1.1
+-e ../../shared/shared
+-e ../../shared/ai_core
+-e ../../shared/agents
+-e ../../shared/database

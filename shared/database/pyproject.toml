@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "creatoros-database"
+version = "0.1.0"
+description = "Database models and migrations for CreatorOS."
+requires-python = ">=3.11"
+dependencies = [
+  "sqlalchemy>=2.0.31",
+  "pymysql>=1.1.1",
+  "alembic>=1.13.2",
+  "pydantic-settings>=2.4.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["database*"]

@@ -1,0 +1,8 @@
+pyproject.toml
+creatoros_shared.egg-info/PKG-INFO
+creatoros_shared.egg-info/SOURCES.txt
+creatoros_shared.egg-info/dependency_links.txt
+creatoros_shared.egg-info/requires.txt
+creatoros_shared.egg-info/top_level.txt
+shared/__init__.py
+shared/schemas.py

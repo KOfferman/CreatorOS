@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: creatoros-ai-core
+Version: 0.1.0
+Summary: LLM provider abstraction for CreatorOS.
+Requires-Python: >=3.11

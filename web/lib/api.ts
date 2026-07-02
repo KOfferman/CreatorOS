@@ -1,0 +1,264 @@
+import { getAuthHeaders, getUserId as getStoredUserId } from "./auth";
+
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+export const DEFAULT_USER_ID =
+  process.env.NEXT_PUBLIC_CREATOR_USER_ID ?? "demo-user";
+
+export function getActiveUserId(): string {
+  return getStoredUserId();
+}
+
+export type AuthTokenResponse = {
+  access_token: string;
+  token_type: string;
+  expires_in_seconds: number;
+  user_id: string;
+};
+
+export async function login(email: string, password: string): Promise<AuthTokenResponse> {
+  return request<AuthTokenResponse>("/auth/token", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export type CreatorProfile = {
+  id: string;
+  user_id: string;
+  handle: string;
+  niche: string | null;
+  bio: string | null;
+  target_platforms: string[];
+  creator_voice: string | null;
+  audience_size: number | null;
+};
+
+export type TrendReport = {
+  id: string;
+  user_id: string;
+  title: string;
+  summary: string | null;
+  source: string | null;
+  report_date: string | null;
+};
+
+export type ContentIdea = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  score: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CalendarItem = {
+  id: string;
+  user_id: string;
+  content_idea_id: string | null;
+  platform: string | null;
+  scheduled_for: string | null;
+  status: "idea" | "draft" | "scheduled" | "published";
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CoachResponse = {
+  direct_coaching_response: string;
+  recommended_next_actions: string[];
+  content_ideas: string[];
+  risk_warning: string | null;
+  agent_run_id: string | null;
+};
+
+export type PlatformConnection = {
+  platform: string;
+  name: string;
+  connected: boolean;
+  configured: boolean;
+  account_handle: string | null;
+  account_name: string | null;
+  connected_at: string | null;
+};
+
+export async function getPlatformConnections(): Promise<{ platforms: PlatformConnection[] }> {
+  return request<{ platforms: PlatformConnection[] }>("/integrations/platforms");
+}
+
+export async function startPlatformConnection(platform: string): Promise<{
+  authorization_url: string;
+  platform: string;
+}> {
+  return request<{ authorization_url: string; platform: string }>(
+    `/integrations/platforms/${encodeURIComponent(platform)}/connect`,
+    { method: "POST" },
+  );
+}
+
+export async function disconnectPlatform(platform: string): Promise<{ platform: string; disconnected: boolean }> {
+  return request<{ platform: string; disconnected: boolean }>(
+    `/integrations/platforms/${encodeURIComponent(platform)}`,
+    { method: "DELETE" },
+  );
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error(
+      `Cannot reach the API at ${API_BASE_URL}. Start it from api/ with: .venv/bin/uvicorn app.main:app --reload --port 8000`,
+    );
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    let message = body;
+    try {
+      const parsed = JSON.parse(body) as { error?: { message?: string }; detail?: string };
+      message = parsed.error?.message ?? parsed.detail ?? body;
+    } catch {
+      // keep raw body
+    }
+    throw new Error(message || `API ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function getProfile(
+  userId: string = getActiveUserId(),
+): Promise<CreatorProfile | null> {
+  try {
+    return await request<CreatorProfile>(`/creators/${encodeURIComponent(userId)}`);
+  } catch {
+    return null;
+  }
+}
+
+/** @deprecated Use getProfile. Kept for compatibility — no longer creates fallback profiles. */
+export async function getOrCreateProfile(
+  userId: string = getActiveUserId(),
+): Promise<CreatorProfile> {
+  const profile = await getProfile(userId);
+  if (!profile) {
+    throw new Error("Creator profile not found. Re-run seed and sign in again.");
+  }
+  return profile;
+}
+
+export async function getTrends(userId: string = getActiveUserId(), limit = 10) {
+  return request<{ trends: TrendReport[] }>(
+    `/trends/latest?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
+  );
+}
+
+export async function runTrendResearch(payload: {
+  creator_niche: string;
+  target_platforms: string[];
+  audience_description: string;
+}) {
+  return request<{ task_id: string; status: string }>("/trends/run-research", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getIdeas(userId: string = getActiveUserId(), limit = 50) {
+  return request<{ ideas: ContentIdea[] }>(
+    `/content-ideas?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
+  );
+}
+
+export async function generateIdea(payload: {
+  topic: string;
+  platform: string;
+  creator_voice: string;
+  goal: string;
+  audience: string;
+}) {
+  return request<{
+    title: string;
+    description: string;
+    suggested_score: number;
+    status: string;
+  }>("/content-ideas/generate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveIdea(payload: {
+  user_id: string;
+  title: string;
+  description: string;
+  trend_report_id?: string;
+  score?: number;
+  status?: string;
+}) {
+  return request<ContentIdea>("/content-ideas", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCalendar(userId: string = getActiveUserId(), limit = 100) {
+  return request<{ items: CalendarItem[] }>(
+    `/calendar?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
+  );
+}
+
+export async function createCalendarItem(payload: {
+  user_id: string;
+  content_idea_id?: string;
+  platform?: string;
+  scheduled_for: string;
+  status?: "idea" | "draft" | "scheduled" | "published";
+  notes?: string;
+}) {
+  return request<CalendarItem>("/calendar", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCalendarItemStatus(payload: {
+  item_id: string;
+  status: "idea" | "draft" | "scheduled" | "published";
+}) {
+  return request<CalendarItem>(`/calendar/${encodeURIComponent(payload.item_id)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: payload.status }),
+  });
+}
+
+export async function moveCalendarItemDate(payload: {
+  item_id: string;
+  scheduled_for: string;
+}) {
+  return request<CalendarItem>(`/calendar/${encodeURIComponent(payload.item_id)}/move-date`, {
+    method: "PATCH",
+    body: JSON.stringify({ scheduled_for: payload.scheduled_for }),
+  });
+}
+
+export async function askCoach(payload: {
+  user_id: string;
+  question: string;
+}): Promise<CoachResponse> {
+  return request<CoachResponse>("/coach/chat", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
