@@ -151,12 +151,19 @@ Domain agents in `shared/agents/` — each with typed input/output, prompt templ
 
 ## Quick commands
 
-Requires **Python 3.11+** (CI uses 3.12) and **Node 22+** with pnpm.
+Requires **Python 3.11+** (CI uses 3.12), **Node 22+**, and **pnpm** (via corepack).
 
 ```bash
-make install  # venv + deps + copy .env.example → .env.local (first run)
-make test     # pytest + vitest (runs install automatically)
+make install   # venv + deps + copy .env.example → .env.local (first run)
+make test      # pytest + vitest (runs install automatically)
+make dev-all   # API :8000 + Next.js :3000 (two terminals in one)
+make dev-api   # FastAPI only (Ollama auto-starts when LLM_PROVIDER=hermes)
+make dev-web   # Next.js dashboard only
 ```
+
+From repo root you can also run `npm run dev` (delegates to `make dev-all`). The web app lives in **`web/`** (not `apps/web`).
+
+**First-time local login:** `daniela@creatoros.demo` / `demo1234` after `make migrate && make seed`.
 
 ---
 

@@ -1,0 +1,12 @@
+{
+  "name": "creatoros",
+  "private": true,
+  "description": "CreatorOS monorepo — use scripts here or `make` from repo root.",
+  "scripts": {
+    "install": "make install",
+    "test": "make test",
+    "dev": "make dev-all",
+    "dev:api": "make dev-api",
+    "dev:web": "make dev-web"
+  }
+}

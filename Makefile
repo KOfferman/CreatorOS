@@ -1,4 +1,4 @@
-.PHONY: dev test seed migrate api-test web-test install
+.PHONY: dev dev-api dev-web dev-all test seed migrate api-test web-test install
 
 API_DIR := api
 WEB_DIR := web
@@ -7,8 +7,22 @@ PYTHON := $(shell command -v python3.12 2>/dev/null || command -v python3)
 API_PYTHON := $(API_VENV)/bin/python
 API_PIP := $(API_VENV)/bin/pip
 
-dev:
+dev: dev-api
+
+dev-api:
 	$(MAKE) -C $(API_DIR) dev
+
+dev-web:
+	cd $(WEB_DIR) && CI=true corepack pnpm dev
+
+dev-all:
+	@echo "CreatorOS local dev"
+	@echo "  API  → http://localhost:8000"
+	@echo "  Web  → http://localhost:3000"
+	@trap 'kill 0' EXIT; \
+	$(MAKE) dev-api & \
+	$(MAKE) dev-web & \
+	wait
 
 $(API_VENV)/bin/python:
 	$(PYTHON) -m venv $(API_VENV)
