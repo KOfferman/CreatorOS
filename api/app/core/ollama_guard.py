@@ -34,6 +34,8 @@ async def verify_ollama_for_startup(settings: Settings) -> None:
         return
     if os.environ.get("VERCEL"):
         return
+    if os.environ.get("CI") == "true":
+        return
     if not uses_local_ollama(settings):
         return
 

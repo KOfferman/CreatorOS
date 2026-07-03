@@ -68,9 +68,10 @@ jobs:
 
       - name: Run pytest
         run: |
-          # Isolated unit tests — override DB/auth only for pytest (same pattern as conftest).
+          # Isolated unit tests — override DB/auth/LLM for pytest (CI job env uses hermes).
           export ENVIRONMENT=test
           export AUTH_ENABLED=false
+          export LLM_PROVIDER=mock
           export DATABASE_URL="sqlite+pysqlite:///:memory:"
           python -m pytest tests -q
 
