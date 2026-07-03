@@ -27,8 +27,5 @@
     "jsdom": "^29.1.1",
     "typescript": "latest",
     "vitest": "^4.1.9"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["sharp"]
   }
 }
