@@ -134,6 +134,8 @@ Domain agents in `shared/agents/` — each with typed input/output, prompt templ
 | **Auth** | Bcrypt + JWT (`auth_mode: password`) | Production uses hashed passwords; `DEMO_AUTH_ENABLED=true` only for local dev |
 | **Session transport** | HttpOnly cookie (prod); Bearer in localStorage (cross-origin dev only) | Vercel same-origin uses secure cookies; `localhost:3000` → `:8000` keeps dev Bearer fallback |
 | **Multi-tenant isolation** | `user_id` from JWT only | No client-supplied `user_id`; repositories scope update/delete by owner |
+| **Admin RBAC** | `ADMIN_USER_IDS` allowlist | `/admin/*` requires configured admin user id, not just any JWT |
+| **Rate limiting** | Redis in prod when `REDIS_URL` set | In-memory fallback for local/test; Upstash recommended on Vercel |
 | **LLM on Vercel** | OpenRouter Hermes when keyed | Ollama cannot run serverless; mock blocked in production unless explicitly allowed |
 | **LLM errors** | Fail closed in production | Content generator returns 503 on provider failure; mock fallback only in dev/test |
 | **Trend signals** | RSS (`TREND_DATA_SOURCE=rss`) | Real public feeds without paid APIs; mock still available for offline dev |
@@ -145,10 +147,8 @@ Domain agents in `shared/agents/` — each with typed input/output, prompt templ
 ## Quick commands
 
 ```bash
-make dev      # API + Ollama (api/Makefile)
-make test     # pytest + vitest
-make seed     # demo data (daniela@creatoros.demo / demo1234)
-make migrate  # Alembic upgrade
+make install  # venv + deps + copy .env.example → .env.local (first run)
+make test     # pytest + vitest (runs install automatically)
 ```
 
 ---

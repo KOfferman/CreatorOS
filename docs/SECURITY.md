@@ -12,10 +12,12 @@
 - JWT issuance endpoint (`/api/v1/auth/token`)
 - bearer token verification with issuer/audience checks
 - route protection via dependency-based auth gates
+- **admin RBAC** — `/admin/*` requires `user_id` in `ADMIN_USER_IDS` (comma-separated env allowlist)
 - `AUTH_ENABLED` flag supports staged rollout
 
 ### API Abuse Protection
-- in-memory per-IP+path rate limiter middleware
+- **Redis-backed** per-IP+path rate limiting in production/staging (`REDIS_URL`)
+- in-memory fallback for local development and tests
 - configurable threshold: `API_RATE_LIMIT_PER_MINUTE`
 - explicit 429 responses and retry hints
 
@@ -38,6 +40,13 @@
 - auth secret minimum-strength enforcement in secure modes
 - startup checks for invalid production/staging secret patterns
 - provider key sanity checks for selected LLM provider
+- `.env.local` files are gitignored — never commit environment files
+
+### OAuth State (Social Integrations)
+- OAuth `state` is a **signed JWT** (`create_oauth_state` / `verify_oauth_state` in `api/app/social/oauth_service.py`)
+- Claims: `sub` (user id), `platform`, `purpose=social_oauth_state`, `iss`, `aud`, 10-minute `exp`
+- Callback verifies signature, issuer, audience, and purpose before completing the connection
+- **Current limitation:** state binds platform + user id but is not yet bound to a browser session nonce; treat stolen state links as in-scope for future hardening (PKCE + server-side session binding)
 
 ### Observability for Security
 - request IDs in logs + responses
@@ -61,7 +70,7 @@
 
 ## Recommended Next Steps
 1. move secrets to managed secret store (AWS/GCP/Vault)
-2. add RBAC and org-scoped authorization checks
+2. bind OAuth state to server session nonce + PKCE
 3. add WAF + IP reputation filtering at edge
 4. implement signed audit trails for high-risk operations
 5. add SAST/DAST + dependency vulnerability gates in CI

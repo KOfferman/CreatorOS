@@ -1,27 +1,30 @@
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections import deque
+from typing import Protocol
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
+logger = logging.getLogger(__name__)
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, requests_per_minute: int = 120) -> None:
-        super().__init__(app)
+
+class RateLimitBackend(Protocol):
+    def check(self, key: str) -> tuple[bool, int]: ...
+
+
+class InMemoryRateLimitBackend:
+    def __init__(self, *, requests_per_minute: int, window_seconds: float = 60.0) -> None:
         self.requests_per_minute = max(1, requests_per_minute)
-        self.window_seconds = 60.0
+        self.window_seconds = window_seconds
         self._lock = threading.Lock()
         self._buckets: dict[str, deque[float]] = {}
 
-    def _bucket_key(self, request: Request) -> str:
-        client_ip = request.client.host if request.client else "unknown"
-        return f"{client_ip}:{request.url.path}"
-
-    def _check(self, key: str) -> tuple[bool, int]:
+    def check(self, key: str) -> tuple[bool, int]:
         now = time.time()
         with self._lock:
             bucket = self._buckets.setdefault(key, deque())
@@ -33,12 +36,83 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             remaining = max(0, self.requests_per_minute - len(bucket))
             return allowed, remaining
 
+
+class RedisRateLimitBackend:
+    def __init__(self, *, redis_url: str, requests_per_minute: int, window_seconds: int = 60) -> None:
+        import redis
+
+        self.requests_per_minute = max(1, requests_per_minute)
+        self.window_seconds = window_seconds
+        self._client = redis.from_url(redis_url, decode_responses=True)
+
+    def check(self, key: str) -> tuple[bool, int]:
+        redis_key = f"ratelimit:{key}"
+        count = int(self._client.incr(redis_key))
+        if count == 1:
+            self._client.expire(redis_key, self.window_seconds)
+        allowed = count <= self.requests_per_minute
+        remaining = max(0, self.requests_per_minute - count)
+        return allowed, remaining
+
+
+def _is_placeholder_redis_url(redis_url: str) -> bool:
+    lowered = redis_url.strip().lower()
+    return lowered.startswith("redis://redis:") or lowered.startswith("redis://redis/")
+
+
+def build_rate_limit_backend(
+    *,
+    environment: str,
+    redis_url: str,
+    requests_per_minute: int,
+) -> RateLimitBackend:
+    env = environment.strip().lower()
+    if redis_url and not _is_placeholder_redis_url(redis_url):
+        try:
+            backend = RedisRateLimitBackend(
+                redis_url=redis_url,
+                requests_per_minute=requests_per_minute,
+            )
+            backend.check("__startup_probe__")
+            logger.info("rate_limit_backend=redis")
+            return backend
+        except Exception as exc:
+            if env in {"production", "staging"}:
+                logger.error("redis_rate_limit_unavailable", exc_info=exc)
+            else:
+                logger.warning("redis_rate_limit_unavailable_falling_back_to_memory", exc_info=exc)
+
+    if env in {"production", "staging"}:
+        logger.warning(
+            "rate_limit_using_in_memory_backend — set REDIS_URL (e.g. Upstash) for multi-instance limiting"
+        )
+
+    logger.info("rate_limit_backend=memory")
+    return InMemoryRateLimitBackend(requests_per_minute=requests_per_minute)
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(
+        self,
+        app,
+        *,
+        backend: RateLimitBackend,
+        requests_per_minute: int = 120,
+    ) -> None:
+        super().__init__(app)
+        self.backend = backend
+        self.requests_per_minute = max(1, requests_per_minute)
+
+    def _bucket_key(self, request: Request) -> str:
+        client_ip = request.client.host if request.client else "unknown"
+        return f"{client_ip}:{request.url.path}"
+
     async def dispatch(self, request: Request, call_next) -> Response:
         if request.url.path in {"/health", "/healthz"}:
             return await call_next(request)
 
         key = self._bucket_key(request)
-        allowed, remaining = self._check(key)
+        allowed, remaining = self.backend.check(key)
         if not allowed:
             return JSONResponse(
                 status_code=429,

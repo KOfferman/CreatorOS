@@ -11,13 +11,19 @@ from app.core.logging import configure_logging
 from app.core.ollama_guard import check_ollama_reachable, uses_local_ollama, verify_ollama_for_startup
 from app.core.production_guard import validate_production_settings
 from app.errors.handlers import register_exception_handlers
-from app.middlewares.rate_limit import RateLimitMiddleware
+from app.middlewares.rate_limit import RateLimitMiddleware, build_rate_limit_backend
 from app.middlewares.request_id import RequestIDMiddleware
 from app.schemas.health import HealthResponse
 
 settings = get_settings()
 configure_logging(settings.log_level)
 validate_production_settings(settings)
+
+_rate_limit_backend = build_rate_limit_backend(
+    environment=settings.environment,
+    redis_url=settings.redis_url,
+    requests_per_minute=settings.api_rate_limit_per_minute,
+)
 
 
 @asynccontextmanager
@@ -31,6 +37,7 @@ app = FastAPI(title="CreatorOS API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     RateLimitMiddleware,
+    backend=_rate_limit_backend,
     requests_per_minute=settings.api_rate_limit_per_minute,
 )
 app.add_middleware(

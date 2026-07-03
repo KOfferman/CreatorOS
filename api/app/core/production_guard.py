@@ -41,3 +41,6 @@ def validate_production_settings(settings: Settings) -> None:
                 "Mock LLM is not allowed in production. "
                 "Set OPENROUTER_API_KEY (Hermes) or ALLOW_MOCK_LLM_IN_PRODUCTION=true for demos."
             )
+
+    if not settings.admin_user_ids:
+        raise RuntimeError("ADMIN_USER_IDS must list at least one user id in production.")

@@ -1,22 +1,32 @@
 .PHONY: dev test seed migrate api-test web-test install
 
+API_DIR := api
+WEB_DIR := web
+API_VENV := $(API_DIR)/.venv
+API_PYTHON := $(API_VENV)/bin/python
+API_PIP := $(API_VENV)/bin/pip
+
 dev:
-	$(MAKE) -C api dev
+	$(MAKE) -C $(API_DIR) dev
+
+install:
+	python3 -m venv $(API_VENV)
+	$(API_PIP) install --upgrade pip
+	$(API_PIP) install -r $(API_DIR)/requirements.txt
+	cd $(WEB_DIR) && corepack pnpm install --frozen-lockfile
+	@test -f $(WEB_DIR)/.env.local || cp $(WEB_DIR)/.env.example $(WEB_DIR)/.env.local
+	@test -f $(API_DIR)/.env.local || cp $(API_DIR)/.env.example $(API_DIR)/.env.local
 
 test: api-test web-test
 
-api-test:
-	cd api && python3 -m pytest tests -q
+api-test: install
+	cd $(API_DIR) && ../$(API_VENV)/bin/python -m pytest tests -q
 
-web-test:
-	cd web && pnpm test
+web-test: install
+	cd $(WEB_DIR) && corepack pnpm test
 
 seed:
-	cd api && python3 scripts/seed_data.py
+	cd $(API_DIR) && ../$(API_VENV)/bin/python scripts/seed_data.py
 
 migrate:
-	$(MAKE) -C api migrate
-
-install:
-	cd api && python3 -m pip install -r requirements.txt
-	cd web && corepack pnpm install --frozen-lockfile
+	$(MAKE) -C $(API_DIR) migrate

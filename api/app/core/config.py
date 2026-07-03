@@ -21,9 +21,11 @@ class Settings(BaseSettings):
     auth_access_token_exp_minutes: int = 60
 
     database_url: str
+    redis_url: str = ""
     celery_broker_url: str
     celery_result_backend: str
     api_rate_limit_per_minute: int = 120
+    admin_user_ids: Annotated[list[str], NoDecode] = []
 
     llm_provider: str = "mock"
     openai_api_key: str = ""
@@ -91,6 +93,16 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @field_validator("admin_user_ids", mode="before")
+    @classmethod
+    def split_admin_user_ids(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value or []
+
+    def is_admin_user(self, user_id: str) -> bool:
+        return user_id in set(self.admin_user_ids)
 
     @field_validator("openai_api_key")
     @classmethod

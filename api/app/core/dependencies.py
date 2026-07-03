@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.auth.constants import AUTH_COOKIE_NAME
+from app.core.config import get_settings
 from app.core.security import AuthError, verify_access_token
 from database import get_session_factory
 
@@ -50,6 +51,18 @@ def require_authenticated_user(
 
     user = AuthenticatedUser(user_id=payload["sub"], email=payload.get("email"))
     request.state.authenticated_user = user
+    return user
+
+
+def require_admin_user(
+    user: AuthenticatedUser = Depends(require_authenticated_user),
+) -> AuthenticatedUser:
+    settings = get_settings()
+    if not settings.is_admin_user(user.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required.",
+        )
     return user
 
 
