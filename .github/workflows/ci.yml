@@ -119,6 +119,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lowercase image owner for GHCR
+        id: ghcr
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Validate GitHub secrets/variables
         run: bash scripts/check-github-env.sh
 
