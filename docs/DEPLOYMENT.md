@@ -39,7 +39,7 @@ gh auth login
 | **GitHub Secrets** | CI + deploy (`AUTH_SECRET`, `DATABASE_URL`, `VERCEL_TOKEN`, …) |
 | **GitHub Variables** | CI (`ENVIRONMENT`, `NEXT_PUBLIC_*`, …) |
 
-**Deploy flow:** push to `main` → API + web tests → `deploy-vercel` job (`vercel build` + `vercel deploy --prebuilt --prod`) → smoke test `/api/v1/health`.
+**Deploy flow:** push to `main` → API + web tests → `deploy-vercel` job (`vercel deploy --prod`) → smoke test `/api/v1/health`.
 
 Manifest: [`.github/env.manifest.json`](../.github/env.manifest.json)
 
