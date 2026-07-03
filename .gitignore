@@ -30,9 +30,11 @@ pnpm-lock.yaml.bak
 .env.*.local
 !.env.example
 !.github/env.production.example
+!api/.env.vercel.example
 
 # Local production override for GitHub env sync (never commit)
 .github/env.production.local
+api/.env.vercel
 
 # Local databases & caches
 *.db

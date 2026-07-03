@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync app env (from APP_ENV_JSON or individual env vars) to Vercel.
+# Sync app env (from GitHub secrets/vars in the job environment) to Vercel.
 # Usage: ./scripts/sync-vercel-env.sh [production|preview]
 set -euo pipefail
 
@@ -26,11 +26,10 @@ vercel_cfg = manifest.get("vercel", {})
 keys = vercel_cfg.get("deploySecrets", []) + vercel_cfg.get("deployVariables", [])
 
 values: dict[str, str] = {}
-if os.environ.get("APP_ENV_JSON"):
-    values.update(json.loads(os.environ["APP_ENV_JSON"]))
 for key in keys:
-    if key not in values and os.environ.get(key):
-        values[key] = os.environ[key]
+    value = os.environ.get(key, "")
+    if value:
+        values[key] = value
 
 
 def upsert(name: str, value: str) -> None:

@@ -222,7 +222,7 @@ export function SettingsScreen() {
             { label: "Email", value: session?.email ?? "—" },
             { label: "User ID", value: session?.userId ?? "—" },
             { label: "Plan", value: "Pro · $49/mo" },
-            { label: "API", value: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1" },
+            { label: "API", value: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1" },
           ].map((row) => (
             <div key={row.label} className="flex items-center justify-between border-b border-white/5 py-2 last:border-0">
               <span className="text-xs text-[#717182]">{row.label}</span>

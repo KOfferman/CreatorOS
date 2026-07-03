@@ -5,16 +5,18 @@
       "root": "web",
       "framework": "nextjs",
       "installCommand": "corepack enable && pnpm install --frozen-lockfile",
-      "buildCommand": "pnpm build"
+      "buildCommand": "NEXT_PUBLIC_API_BASE_URL=/api/v1 pnpm build"
     },
     "api": {
       "root": "api",
+      "framework": "fastapi",
       "entrypoint": "app.main:app",
-      "installCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+      "installCommand": "bash scripts/vercel-install.sh",
       "functions": {
         "app/main.py": {
           "maxDuration": 60,
-          "excludeFiles": "{tests/**,**/__pycache__/**,**/*.pyc,.venv/**,**/.pytest_cache/**}"
+          "excludeFiles": "{tests/**,worker/**,**/__pycache__/**,**/*.pyc,.venv/**,**/.pytest_cache/**}",
+          "includeFiles": "{../shared/ai_core/**,../shared/agents/**,../shared/database/**,../shared/shared/**}"
         }
       }
     }

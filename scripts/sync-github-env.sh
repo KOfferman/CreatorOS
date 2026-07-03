@@ -9,13 +9,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TARGET_ENV="production"
+TARGET_ENV="repository"
 REPO_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env)
-      TARGET_ENV="${2:?missing environment name}"
+      TARGET_ENV="${2:?missing environment name (use 'repository' for repo-level)}"
       shift 2
       ;;
     --repo)
@@ -102,32 +102,35 @@ secret_keys = set(manifest.get("secrets", [])) & set(deploy_env)
 variable_keys = set(manifest.get("variables", [])) & set(deploy_env)
 
 
-def gh(*args: str, input_text: str | None = None) -> None:
+def gh(*args, input_text=None):
     cmd = ["gh", *repo_args, *args]
     subprocess.run(cmd, input=input_text, text=True, check=True)
 
 
-print(f"Syncing to GitHub environment: {target_env}")
+def gh_secret_set(key: str, value: str) -> None:
+    if target_env == "repository":
+        gh("secret", "set", key, input_text=value + "\n")
+    else:
+        gh("secret", "set", key, "--env", target_env, input_text=value + "\n")
+
+
+def gh_variable_set(key: str, value: str) -> None:
+    if target_env == "repository":
+        gh("variable", "set", key, "--body", value)
+    else:
+        gh("variable", "set", key, "--env", target_env, "--body", value)
+
+
+print(f"Syncing to GitHub: {target_env}")
 print(f"  repo:      {' '.join(repo_args) or '(current)'}")
 
 for key in sorted(secret_keys):
     print(f"  secret    {key}")
-    gh("secret", "set", key, "--env", target_env, input_text=deploy_env[key] + "\n")
+    gh_secret_set(key, deploy_env[key])
 
 for key in sorted(variable_keys):
     print(f"  variable  {key}")
-    gh("variable", "set", key, "--env", target_env, deploy_env[key])
+    gh_variable_set(key, deploy_env[key])
 
-bundle = {k: deploy_env[k] for k in sorted(deploy_env)}
-print("  secret    APP_ENV_JSON (bundle for deploy workflow)")
-gh(
-    "secret",
-    "set",
-    "APP_ENV_JSON",
-    "--env",
-    target_env,
-    input_text=json.dumps(bundle) + "\n",
-)
-
-print(f"Done. Synced {len(secret_keys)} secrets, {len(variable_keys)} variables, and APP_ENV_JSON.")
+print(f"Done. Synced {len(secret_keys)} secrets and {len(variable_keys)} variables.")
 PY

@@ -1,10 +1,21 @@
 import { getAuthHeaders, getUserId as getStoredUserId } from "./auth";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  (process.env.NODE_ENV === "production"
-    ? "/api/v1"
-    : "http://localhost:8000/api/v1");
+function resolveApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  const isLocalhost =
+    !configured ||
+    configured.includes("localhost") ||
+    configured.includes("127.0.0.1");
+
+  // Production always uses same-origin API (Vercel Services rewrite → /api/v1)
+  if (process.env.NODE_ENV === "production") {
+    return isLocalhost ? "/api/v1" : configured;
+  }
+
+  return configured ?? "http://localhost:8000/api/v1";
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 export const DEFAULT_USER_ID =
   process.env.NEXT_PUBLIC_CREATOR_USER_ID ?? "demo-user";
 

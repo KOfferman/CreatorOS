@@ -10,6 +10,36 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Loaded from GitHub repository secrets/variables (sync via scripts/sync-github-env.sh).
+# Mirrors api/.env.local + web/.env.local — never hardcode values here.
+env:
+  ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+  LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+  AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+  AUTH_URL: ${{ vars.AUTH_URL }}
+  AUTH_ENABLED: ${{ vars.AUTH_ENABLED }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  REDIS_HOST: ${{ vars.REDIS_HOST }}
+  REDIS_PORT: ${{ vars.REDIS_PORT }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  CELERY_BROKER_URL: ${{ secrets.CELERY_BROKER_URL }}
+  CELERY_RESULT_BACKEND: ${{ secrets.CELERY_RESULT_BACKEND }}
+  LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+  OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
+  OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
+  API_PORT: ${{ vars.API_PORT }}
+  WEB_PORT: ${{ vars.WEB_PORT }}
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  GOOGLE_AUTH_REDIRECT_URI: ${{ vars.GOOGLE_AUTH_REDIRECT_URI }}
+  META_CLIENT_ID: ${{ vars.META_CLIENT_ID }}
+  META_CLIENT_SECRET: ${{ secrets.META_CLIENT_SECRET }}
+  META_REDIRECT_URI: ${{ vars.META_REDIRECT_URI }}
+  INSTAGRAM_CONFIG_ID: ${{ vars.INSTAGRAM_CONFIG_ID }}
+  INSTAGRAM_CONFIG_SECRET: ${{ secrets.INSTAGRAM_CONFIG_SECRET }}
+  NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+  NEXT_PUBLIC_CREATOR_USER_ID: ${{ vars.NEXT_PUBLIC_CREATOR_USER_ID }}
+
 jobs:
   api-tests:
     name: API tests
@@ -19,6 +49,9 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate GitHub secrets/variables
+        run: bash ../scripts/check-github-env.sh
 
       - uses: actions/setup-python@v5
         with:
@@ -32,20 +65,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pytest
-        env:
-          ENVIRONMENT: test
-          LOG_LEVEL: INFO
-          AUTH_SECRET: test-secret-value-that-is-long-enough-123
-          AUTH_URL: http://localhost:3000
-          AUTH_ENABLED: "false"
-          DATABASE_URL: sqlite+pysqlite:///:memory:
-          CELERY_BROKER_URL: redis://localhost:6379/0
-          CELERY_RESULT_BACKEND: redis://localhost:6379/1
-          LLM_PROVIDER: openai
-          OPENAI_API_KEY: test-openai-key-1234567890
-          OPENAI_MODEL: gpt-4o-mini
-          API_RATE_LIMIT_PER_MINUTE: "5000"
-        run: python -m pytest tests -q
+        run: |
+          # Isolated unit tests — override DB/auth only for pytest (same pattern as conftest).
+          export ENVIRONMENT=test
+          export AUTH_ENABLED=false
+          export DATABASE_URL="sqlite+pysqlite:///:memory:"
+          python -m pytest tests -q
 
   web-tests:
     name: Web tests & build
@@ -55,6 +80,9 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate GitHub secrets/variables
+        run: bash ../scripts/check-github-env.sh
 
       - uses: pnpm/action-setup@v4
         with:
@@ -73,8 +101,6 @@ jobs:
         run: pnpm test --run
 
       - name: Build Next.js
-        env:
-          NEXT_PUBLIC_API_BASE_URL: /api/v1
         run: pnpm build
 
   docker-build:
@@ -93,6 +119,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate GitHub secrets/variables
+        run: bash scripts/check-github-env.sh
+
       - uses: docker/setup-buildx-action@v3
 
       - name: Build ${{ matrix.name }} image
@@ -102,5 +131,7 @@ jobs:
           file: ${{ matrix.file }}
           push: false
           tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.tag }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

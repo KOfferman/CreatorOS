@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -49,6 +51,8 @@ app.include_router(api_v1_router, prefix="/api/v1")
 
 
 def _health_status() -> str:
+    if os.environ.get("VERCEL"):
+        return "ok"
     if uses_local_ollama(settings) and not check_ollama_reachable(settings):
         return "degraded"
     return "ok"

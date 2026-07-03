@@ -4,6 +4,9 @@
 
 CreatorOS is a production-style SaaS monorepo that turns audience signals into trends, content, and growth coaching — orchestrated by typed AI agents behind a Next.js dashboard, FastAPI control plane, and Celery workers.
 
+**Live demo:** [https://creator-os-gold.vercel.app](https://creator-os-gold.vercel.app)  
+Demo login: `daniela@creatoros.demo` / `demo1234`
+
 > Built to demonstrate **Principal / Founding Engineer–level system design**: clear service boundaries, provider-agnostic AI, async job orchestration, observability baselines, and CTO-grade architecture documentation — not a prompt wrapper.
 
 ---
@@ -46,39 +49,45 @@ CreatorOS unifies that into one intelligence layer:
 
 ## Demo Flow (5 minutes)
 
-**1. Start the stack**
+### Live (Vercel)
+
+| | URL |
+|---|---|
+| **Dashboard** | [creator-os-gold.vercel.app](https://creator-os-gold.vercel.app) |
+| **API** | [creator-os-gold.vercel.app/api/v1/health](https://creator-os-gold.vercel.app/api/v1/health) |
+
+1. Open the dashboard and sign in with `daniela@creatoros.demo` / `demo1234`
+2. **Home** — daily briefing, trend alerts, platform stats (seeded creator persona)
+3. **Trends** → **Generator** → **Calendar** → **AI Coach** → **Settings**
+
+Deployed via [Vercel Services](https://vercel.com/docs/services) (`vercel.json`): Next.js web + FastAPI API on one domain (`/api/v1` same-origin).
+
+### Local development
 
 ```bash
 git clone <repo-url> && cd CreatorOS
-cp api/.env.example api/.env    # AUTH_SECRET pre-filled for local demo
+cp api/.env.example api/.env.local
+cp web/.env.example web/.env.local
 docker compose up --build
+# or: cd api && make dev  &&  cd web && pnpm dev
 ```
 
 | Service | URL |
 |---|---|
 | Dashboard | http://localhost:3000 |
-| API | http://localhost:8000/health |
+| API | http://localhost:8000/api/v1 |
 
-**2. Log in** — any email + password (8+ chars). Demo auth auto-provisions users (`auth_mode: "demo"`).
+Log in with any email + password (8+ chars). Demo auth auto-provisions users (`auth_mode: "demo"`).
 
-**3. Walk the creator loop**
-
-1. **Dashboard** — daily briefing, trend alerts, platform stats
-2. **Trends** — filter by platform, run research, pick a high-confidence topic
-3. **Generator** — produce structured content from a trend or brief
-4. **Calendar** — save and schedule the idea
-5. **Coach** — ask *"Why did my last post outperform?"* and get actionable guidance
-6. **Settings** — connect Instagram/YouTube via OAuth (requires provider credentials in `api/.env`)
-
-**4. Show the engineering** — open `docs/ARCHITECTURE.md`, point at the agent run audit trail in MySQL, and explain the provider abstraction in `shared/ai_core/`.
+**Show the engineering** — open `docs/ARCHITECTURE.md`, inspect `agent_runs` in MySQL, and explain the provider abstraction in `shared/ai_core/`.
 
 ---
 
 ## Screenshots
 
-### Dashboard (live capture)
+### Dashboard (production — creator-os-gold.vercel.app)
 
-![CreatorOS Dashboard — daily briefing, trend alerts, platform analytics](docs/screenshots/dashboard.png)
+![CreatorOS Dashboard — daily briefing, trend alerts, platform analytics, and creator score](docs/screenshots/dashboard.png)
 
 ### Additional views (placeholders — swap with product captures)
 
@@ -243,27 +252,18 @@ make dev
 cd api/worker && celery -A worker_app.celery_app worker --loglevel=INFO
 ```
 
-### Deploy (Vercel + GitHub Actions)
+### Deploy (Vercel + GitHub)
 
-One Vercel project deploys **web + API** from the repo root via [`vercel.json`](vercel.json) (Vercel Services).
+**Production:** [https://creator-os-gold.vercel.app](https://creator-os-gold.vercel.app)
 
-**Sync `.env.local` → GitHub (production environment):**
-
-```bash
-gh auth login
-./scripts/sync-github-env.sh --env production --repo KOfferman/CreatorOS
-```
-
-Then add Vercel deploy credentials as GitHub secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+Vercel is connected to GitHub — pushes to `main` deploy automatically. [`vercel.json`](vercel.json) runs **web + API** from the repo root (same-origin `/api/v1`).
 
 ```bash
-vercel link    # once, from repo root
-vercel --prod  # optional manual deploy
+./scripts/sync-github-env.sh --repo KOfferman/CreatorOS   # CI secrets/vars
+python3 scripts/push-vercel-env.py                        # Vercel env (api/.env.vercel)
 ```
 
-CI runs on every PR ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)); production deploys on push to `main` ([`.github/workflows/deploy-vercel.yml`](.github/workflows/deploy-vercel.yml)).
-
-Full setup: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+Full guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ---
 
@@ -288,7 +288,10 @@ Production roadmap: password hashing (schema ready), GitHub OAuth — [`docs/SEC
 
 ## API Surface
 
-Base: `http://localhost:8000/api/v1`
+| Environment | Base URL |
+|---|---|
+| **Production (Vercel)** | `https://creator-os-gold.vercel.app/api/v1` |
+| **Local** | `http://localhost:8000/api/v1` |
 
 | Domain | Routes |
 |---|---|
@@ -333,4 +336,4 @@ Full plan: [`docs/PRODUCT_ROADMAP.md`](docs/PRODUCT_ROADMAP.md)
 
 ## Status
 
-Active development. Production-oriented foundations are in place — the kind of scaffolding you'd expect before scaling a team, not after. Run `docker compose up`, log in with any credentials, and walk through the full creator loop with mock AI at zero cost.
+Live at [creator-os-gold.vercel.app](https://creator-os-gold.vercel.app). Production-oriented foundations are in place — Docker for local dev, Vercel Services for hosted web + API, typed agents with provider abstraction, and full architecture docs. Clone and run `docker compose up` for a zero-cost local loop with mock AI.
