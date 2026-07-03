@@ -1,7 +1,8 @@
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -45,9 +46,9 @@ class Settings(BaseSettings):
             return self.openrouter_model
         return self.openai_model or "gpt-4o-mini"
 
-    cors_allow_origins: list[str] = ["http://localhost:3000"]
-    cors_allow_methods: list[str] = ["*"]
-    cors_allow_headers: list[str] = ["*"]
+    cors_allow_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+    cors_allow_methods: Annotated[list[str], NoDecode] = ["*"]
+    cors_allow_headers: Annotated[list[str], NoDecode] = ["*"]
     cors_allow_credentials: bool = True
 
     oauth_redirect_base_url: str = "http://localhost:8000/api/v1/integrations/oauth"
