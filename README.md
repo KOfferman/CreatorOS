@@ -57,15 +57,7 @@ Deployed via [Vercel Services](https://vercel.com/docs/services) (`vercel.json`)
 
 ## Screenshots
 
-| Screen | Preview |
-|---|---|
-| **Dashboard** | ![Dashboard](docs/screenshots/dashboard.png) |
-| **Trends** | ![Trends](docs/screenshots/trends-placeholder.svg) |
-| **Generator** | ![Generator](docs/screenshots/generator-placeholder.svg) |
-| **Calendar** | ![Calendar](docs/screenshots/calendar-placeholder.svg) |
-| **AI Coach** | ![Coach](docs/screenshots/coach-placeholder.svg) |
-
-> Replace placeholder SVGs with PNG/GIF captures from [the live demo](https://creator-os-gold.vercel.app) for portfolio polish.
+![CreatorOS Dashboard — daily briefing, trend alerts, platform analytics, and creator score](docs/screenshots/dashboard.png)
 
 ---
 
@@ -107,7 +99,19 @@ flowchart TB
 
 **Request path:** Client → FastAPI (auth + validation + rate limit) → sync response or Celery enqueue → Agent pipeline → LLM provider → persist `agent_runs` → client reads updated state.
 
+> **Architecture note:** The current implementation uses MySQL as the relational database to keep deployment straightforward for the MVP. The application was designed with a repository abstraction so the storage engine is interchangeable. For production deployments requiring vector search, retrieval-augmented generation (RAG), and semantic memory, I would recommend PostgreSQL with pgvector.
+
 Full docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/AI_AGENT_DESIGN.md`](docs/AI_AGENT_DESIGN.md) · [`docs/SECURITY.md`](docs/SECURITY.md)
+
+---
+
+## Database
+
+CreatorOS currently uses **MySQL** for the MVP to keep deployment simple and portable across the selected hosting environment.
+
+The persistence layer is intentionally abstracted using the Repository pattern, making the application database-agnostic. Migrating to another relational database requires minimal changes outside the infrastructure layer.
+
+For a production AI platform, my preferred architecture would use **PostgreSQL + pgvector** to support semantic search, vector embeddings, retrieval-augmented generation (RAG), and long-term AI memory.
 
 ---
 
@@ -135,7 +139,8 @@ Domain agents in `shared/agents/` — each with typed input/output, prompt templ
 | **Session transport** | HttpOnly cookie (prod); Bearer in localStorage (cross-origin dev only) | Vercel same-origin uses secure cookies; `localhost:3000` → `:8000` keeps dev Bearer fallback |
 | **Multi-tenant isolation** | `user_id` from JWT only | No client-supplied `user_id`; repositories scope update/delete by owner |
 | **Admin RBAC** | `ADMIN_USER_IDS` allowlist | `/admin/*` requires configured admin user id, not just any JWT |
-| **Rate limiting** | Redis in prod when `REDIS_URL` set | In-memory fallback for local/test; Upstash recommended on Vercel |
+| **Rate limiting** | Redis required in prod/staging | No in-memory fallback on Vercel; set `REDIS_URL` to Upstash (or similar) |
+| **LLM cost tracking** | Per-model pricing table + env overrides | `shared/agents/agents/pricing.py`; extend via `LLM_MODEL_PRICING_JSON` |
 | **LLM on Vercel** | OpenRouter Hermes when keyed | Ollama cannot run serverless; mock blocked in production unless explicitly allowed |
 | **LLM errors** | Fail closed in production | Content generator returns 503 on provider failure; mock fallback only in dev/test |
 | **Trend signals** | RSS (`TREND_DATA_SOURCE=rss`) | Real public feeds without paid APIs; mock still available for offline dev |
@@ -145,6 +150,8 @@ Domain agents in `shared/agents/` — each with typed input/output, prompt templ
 ---
 
 ## Quick commands
+
+Requires **Python 3.11+** (CI uses 3.12) and **Node 20+** with pnpm.
 
 ```bash
 make install  # venv + deps + copy .env.example → .env.local (first run)

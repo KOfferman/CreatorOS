@@ -16,8 +16,8 @@
 - `AUTH_ENABLED` flag supports staged rollout
 
 ### API Abuse Protection
-- **Redis-backed** per-IP+path rate limiting in production/staging (`REDIS_URL`)
-- in-memory fallback for local development and tests
+- **Redis-backed** per-IP+path rate limiting — **required** in production/staging (`REDIS_URL` must be a real instance, e.g. Upstash)
+- in-memory backend for local development and tests only
 - configurable threshold: `API_RATE_LIMIT_PER_MINUTE`
 - explicit 429 responses and retry hints
 

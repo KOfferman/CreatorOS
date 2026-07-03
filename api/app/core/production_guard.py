@@ -4,6 +4,7 @@ import os
 
 from app.auth.demo_auth import demo_auth_allowed
 from app.core.config import Settings
+from app.middlewares.rate_limit import is_production_redis_url
 from app.services.llm_factory import resolve_llm_provider
 
 
@@ -44,3 +45,8 @@ def validate_production_settings(settings: Settings) -> None:
 
     if not settings.admin_user_ids:
         raise RuntimeError("ADMIN_USER_IDS must list at least one user id in production.")
+
+    if not is_production_redis_url(settings.redis_url):
+        raise RuntimeError(
+            "REDIS_URL must point to a real Redis instance in production (e.g. Upstash)."
+        )

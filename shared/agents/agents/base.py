@@ -11,6 +11,8 @@ from ai_core import AIProviderError, BaseLLMProvider, TokenUsage
 from database import AgentRun, get_session_factory
 from pydantic import BaseModel
 
+from .pricing import estimate_token_cost
+
 InputSchemaT = TypeVar("InputSchemaT", bound=BaseModel)
 OutputSchemaT = TypeVar("OutputSchemaT", bound=BaseModel)
 
@@ -46,10 +48,6 @@ class BaseAgent(ABC, Generic[InputSchemaT, OutputSchemaT]):
     description: str = ""
     input_schema: type[InputSchemaT]
     output_schema: type[OutputSchemaT]
-
-    _MODEL_PRICING_PER_1K_TOKENS: dict[str, tuple[Decimal, Decimal]] = {
-        "gpt-4o-mini": (Decimal("0.00015"), Decimal("0.00060")),
-    }
 
     def __init__(
         self,
@@ -151,17 +149,16 @@ class BaseAgent(ABC, Generic[InputSchemaT, OutputSchemaT]):
             raise AgentExecutionError(str(exc)) from exc
 
     def _estimate_cost(self, *, usage: TokenUsage) -> AgentCost:
-        input_rate, output_rate = self._MODEL_PRICING_PER_1K_TOKENS.get(
-            self.llm_provider.model_name,
-            (Decimal("0"), Decimal("0")),
+        input_cost, output_cost, total_cost = estimate_token_cost(
+            provider_name=self.llm_provider.provider_name,
+            model_name=self.llm_provider.model_name,
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
         )
-        input_cost = (Decimal(usage.prompt_tokens) / Decimal(1000)) * input_rate
-        output_cost = (Decimal(usage.completion_tokens) / Decimal(1000)) * output_rate
-        total_cost = input_cost + output_cost
         return AgentCost(
-            input_cost_usd=input_cost.quantize(Decimal("0.0000001")),
-            output_cost_usd=output_cost.quantize(Decimal("0.0000001")),
-            total_cost_usd=total_cost.quantize(Decimal("0.0000001")),
+            input_cost_usd=input_cost,
+            output_cost_usd=output_cost,
+            total_cost_usd=total_cost,
         )
 
     def _create_agent_run(

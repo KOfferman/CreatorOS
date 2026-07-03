@@ -55,9 +55,18 @@ class RedisRateLimitBackend:
         return allowed, remaining
 
 
-def _is_placeholder_redis_url(redis_url: str) -> bool:
+def is_placeholder_redis_url(redis_url: str) -> bool:
     lowered = redis_url.strip().lower()
     return lowered.startswith("redis://redis:") or lowered.startswith("redis://redis/")
+
+
+def is_production_redis_url(redis_url: str) -> bool:
+    url = redis_url.strip()
+    if not url:
+        return False
+    if is_placeholder_redis_url(url):
+        return False
+    return url.startswith("redis://") or url.startswith("rediss://")
 
 
 def build_rate_limit_backend(
@@ -67,7 +76,13 @@ def build_rate_limit_backend(
     requests_per_minute: int,
 ) -> RateLimitBackend:
     env = environment.strip().lower()
-    if redis_url and not _is_placeholder_redis_url(redis_url):
+
+    if env in {"production", "staging"}:
+        if not is_production_redis_url(redis_url):
+            raise RuntimeError(
+                "REDIS_URL must point to a real Redis instance in production/staging "
+                "(e.g. Upstash). Docker hostname 'redis' is not valid on Vercel."
+            )
         try:
             backend = RedisRateLimitBackend(
                 redis_url=redis_url,
@@ -77,15 +92,19 @@ def build_rate_limit_backend(
             logger.info("rate_limit_backend=redis")
             return backend
         except Exception as exc:
-            if env in {"production", "staging"}:
-                logger.error("redis_rate_limit_unavailable", exc_info=exc)
-            else:
-                logger.warning("redis_rate_limit_unavailable_falling_back_to_memory", exc_info=exc)
+            raise RuntimeError(f"REDIS_URL is required but connection failed: {exc}") from exc
 
-    if env in {"production", "staging"}:
-        logger.warning(
-            "rate_limit_using_in_memory_backend — set REDIS_URL (e.g. Upstash) for multi-instance limiting"
-        )
+    if redis_url and is_production_redis_url(redis_url):
+        try:
+            backend = RedisRateLimitBackend(
+                redis_url=redis_url,
+                requests_per_minute=requests_per_minute,
+            )
+            backend.check("__startup_probe__")
+            logger.info("rate_limit_backend=redis")
+            return backend
+        except Exception as exc:
+            logger.warning("redis_rate_limit_unavailable_falling_back_to_memory", exc_info=exc)
 
     logger.info("rate_limit_backend=memory")
     return InMemoryRateLimitBackend(requests_per_minute=requests_per_minute)
