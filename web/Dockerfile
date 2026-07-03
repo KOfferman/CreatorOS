@@ -4,6 +4,7 @@ WORKDIR /app
 RUN corepack enable
 
 COPY web/package.json web/pnpm-lock.yaml ./
+ENV CI=true
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
