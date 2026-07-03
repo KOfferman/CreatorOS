@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Edit3 } from "lucide-react";
 
-import { getActiveUserId, getIdeas, getProfile, getTrends, type CreatorProfile } from "../../lib/api";
+import { getIdeas, getProfile, getTrends, type CreatorProfile } from "../../lib/api";
 import { IgIcon, TtIcon, YtIcon } from "../ui/platform-icons";
 
 export function ProfileScreen() {
@@ -11,8 +11,7 @@ export function ProfileScreen() {
   const [creatorScore, setCreatorScore] = useState(371);
 
   useEffect(() => {
-    const userId = getActiveUserId();
-    void Promise.all([getProfile(userId), getIdeas(userId), getTrends(userId)]).then(
+    void Promise.all([getProfile(), getIdeas(), getTrends()]).then(
       ([p, ideas, trends]) => {
         if (!p) return;
         setProfile(p);

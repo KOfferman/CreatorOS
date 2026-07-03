@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { ArrowUp } from "lucide-react";
 
-import { getActiveUserId, getIdeas, getProfile, getTrends } from "../../lib/api";
+import { getIdeas, getProfile, getTrends } from "../../lib/api";
 
 const FOLLOWER_DATA = [
   { month: "Jan", ig: 1600, tt: 1900, yt: 380 },
@@ -41,12 +41,7 @@ export function InsightsScreen() {
   const [trendsCount, setTrendsCount] = useState(0);
 
   useEffect(() => {
-    const userId = getActiveUserId();
-    void Promise.all([
-      getProfile(userId),
-      getIdeas(userId),
-      getTrends(userId),
-    ]).then(([profile, ideas, trends]) => {
+    void Promise.all([getProfile(), getIdeas(), getTrends()]).then(([profile, ideas, trends]) => {
       setAudienceSize(profile?.audience_size ?? 0);
       setIdeasCount(ideas.ideas.length);
       setTrendsCount(trends.trends.length);

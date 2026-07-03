@@ -44,14 +44,13 @@ class GeneratedContentIdeaResponse(BaseModel):
 
 
 class SaveContentIdeaRequest(BaseModel):
-    user_id: str = Field(min_length=1, max_length=120)
     title: str = Field(min_length=1, max_length=500)
     description: str | None = Field(default=None, max_length=6000)
     trend_report_id: str | None = None
     score: float | None = Field(default=None, ge=0.0, le=100.0)
     status: str = "draft"
 
-    @field_validator("user_id", "title", "status")
+    @field_validator("title", "status")
     @classmethod
     def validate_required_strings(cls, value: str, info):
         return _guard_text_input(value, info.field_name)

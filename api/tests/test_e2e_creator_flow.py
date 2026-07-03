@@ -88,11 +88,11 @@ def test_creator_flow_profile_trends_content_calendar_coach(
 
     mock_coach_agent.return_value.run.return_value = _CoachExecution()
 
-    profile = authed_client.get("/api/v1/creators/flow-user-1")
+    profile = authed_client.get("/api/v1/creators/me")
     assert profile.status_code == 200
     assert profile.json()["handle"] == "flow.creates"
 
-    trends = authed_client.get("/api/v1/trends/latest?user_id=flow-user-1")
+    trends = authed_client.get("/api/v1/trends/latest")
     assert trends.status_code == 200
 
     generated = authed_client.post(
@@ -107,12 +107,12 @@ def test_creator_flow_profile_trends_content_calendar_coach(
     )
     assert generated.status_code == 200
 
-    calendar = authed_client.get("/api/v1/calendar?user_id=flow-user-1")
+    calendar = authed_client.get("/api/v1/calendar")
     assert calendar.status_code == 200
 
     coach = authed_client.post(
         "/api/v1/coach/chat",
-        json={"user_id": "flow-user-1", "question": "What should I post today?"},
+        json={"question": "What should I post today?"},
     )
     assert coach.status_code == 200
     assert "Reel" in coach.json()["direct_coaching_response"]

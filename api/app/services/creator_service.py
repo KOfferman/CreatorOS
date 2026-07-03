@@ -11,13 +11,13 @@ class CreatorService:
     def __init__(self, repository: CreatorRepository | None = None) -> None:
         self.repository = repository or CreatorRepository()
 
-    def create_profile(self, payload: CreatorProfileCreateRequest) -> CreatorProfileResponse:
-        if not self.repository.user_exists(user_id=payload.user_id):
+    def create_profile(self, *, user_id: str, payload: CreatorProfileCreateRequest) -> CreatorProfileResponse:
+        if not self.repository.user_exists(user_id=user_id):
             raise LookupError("User not found.")
-        if self.repository.get_profile(user_id=payload.user_id) is not None:
+        if self.repository.get_profile(user_id=user_id) is not None:
             raise ValueError("Creator profile already exists for this user.")
         profile = self.repository.create_profile(
-            user_id=payload.user_id,
+            user_id=user_id,
             handle=payload.handle,
             niche=payload.niche,
             bio=payload.bio,

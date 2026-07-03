@@ -6,7 +6,6 @@ import { ChevronRight, Eye, RefreshCw, Search, Sparkles, Wand2 } from "lucide-re
 
 import {
   generateIdea,
-  getActiveUserId,
   getProfile,
   getTrends,
   runTrendResearch,
@@ -62,10 +61,9 @@ export function TrendsScreen() {
   const loadTrends = async () => {
     setLoading(true);
     try {
-      const userId = getActiveUserId();
       const [profile, result] = await Promise.all([
-        getProfile(userId).catch(() => null),
-        getTrends(userId, 20),
+        getProfile().catch(() => null),
+        getTrends(20),
       ]);
       if (profile?.niche) setProfileNiche(profile.niche);
       setTrends(result.trends);

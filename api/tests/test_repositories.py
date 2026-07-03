@@ -55,6 +55,7 @@ def test_calendar_repository_create_and_move_item(sqlite_session_factory):
 
     moved = repository.move_item_date(
         item_id=created.id,
+        user_id=user_id,
         scheduled_for=datetime(2026, 7, 2, 9, 30, tzinfo=timezone.utc),
     )
     assert moved is not None

@@ -19,10 +19,9 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
     const validate = async () => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/creators/${encodeURIComponent(session.userId)}`,
-          { headers: getAuthHeaders() },
-        );
+        const response = await fetch(`${API_BASE_URL}/creators/me`, {
+          headers: getAuthHeaders(),
+        });
         if (!response.ok) {
           clearSession();
           router.replace("/login");

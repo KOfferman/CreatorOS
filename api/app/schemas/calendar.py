@@ -7,7 +7,6 @@ CalendarStatus = Literal["idea", "draft", "scheduled", "published"]
 
 
 class CreateCalendarItemRequest(BaseModel):
-    user_id: str = Field(min_length=1)
     content_idea_id: str | None = None
     platform: str | None = None
     scheduled_for: datetime

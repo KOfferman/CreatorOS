@@ -36,6 +36,17 @@ sys.path.insert(0, str(ROOT / "shared" / "agents"))
 sys.path.insert(0, str(ROOT / "shared" / "ai_core"))
 sys.path.insert(0, str(ROOT / "shared" / "database"))
 
+@pytest.fixture(autouse=True)
+def _reset_cached_settings() -> Iterator[None]:
+    yield
+    try:
+        from app.core.config import get_settings
+
+        get_settings.cache_clear()
+    except Exception:
+        pass
+
+
 @pytest.fixture()
 def app():
     from app.main import app as fastapi_app

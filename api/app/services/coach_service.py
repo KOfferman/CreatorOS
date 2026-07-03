@@ -16,9 +16,9 @@ class CoachService:
         self.repository = repository or CoachRepository()
         self.settings = get_settings()
 
-    def chat(self, payload: CoachChatRequest) -> CoachChatResponse:
+    def chat(self, *, user_id: str, payload: CoachChatRequest) -> CoachChatResponse:
         started_at = time.perf_counter()
-        context = self.repository.get_context(user_id=payload.user_id)
+        context = self.repository.get_context(user_id=user_id)
         if context.user is None:
             raise LookupError("User not found.")
 
@@ -26,7 +26,7 @@ class CoachService:
 
         agent = GrowthCoachAgent(llm_provider=provider)
         execution = agent.run(
-            user_id=payload.user_id,
+            user_id=user_id,
             payload=GrowthCoachInput(
                 creator_profile={
                     "handle": getattr(context.creator_profile, "handle", None),
@@ -60,7 +60,7 @@ class CoachService:
         logger.info(
             "coach_chat_completed",
             extra={
-                "user_id": payload.user_id,
+                "user_id": user_id,
                 "agent_run_id": execution.meta.agent_run_id,
                 "provider_name": execution.meta.provider_name,
                 "model_name": execution.meta.model_name,

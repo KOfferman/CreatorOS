@@ -25,7 +25,7 @@ class TrendService:
             backend=self.settings.celery_result_backend,
         )
 
-    def get_latest_trends(self, *, user_id: str | None = None, limit: int = 10) -> LatestTrendsResponse:
+    def get_latest_trends(self, *, user_id: str, limit: int = 10) -> LatestTrendsResponse:
         trends = self.repository.get_latest(user_id=user_id, limit=limit)
         return LatestTrendsResponse(trends=[self._to_response(trend) for trend in trends])
 
@@ -42,8 +42,8 @@ class TrendService:
         job = self.task_repository.save_enqueued(TaskJob(task_id=async_task.id))
         return TaskEnqueueResponse(task_id=job.task_id, status=job.status)
 
-    def get_trend_report_by_id(self, *, trend_report_id: str) -> TrendReportResponse:
-        trend = self.repository.get_by_id(trend_report_id=trend_report_id)
+    def get_trend_report_by_id(self, *, trend_report_id: str, user_id: str) -> TrendReportResponse:
+        trend = self.repository.get_by_id(trend_report_id=trend_report_id, user_id=user_id)
         if trend is None:
             raise LookupError("Trend report not found.")
         return self._to_response(trend)

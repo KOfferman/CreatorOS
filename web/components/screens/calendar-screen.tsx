@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
-import { getActiveUserId, getCalendar, type CalendarItem } from "../../lib/api";
+import { getCalendar, type CalendarItem } from "../../lib/api";
 import { IgIcon, TtIcon, YtIcon } from "../ui/platform-icons";
 
 const statusStyle = {
@@ -36,7 +36,7 @@ export function CalendarScreen() {
   );
 
   useEffect(() => {
-    void getCalendar(getActiveUserId(), 100)
+    void getCalendar(100)
       .then((result) => setItems(result.items))
       .catch(() => setItems([]));
   }, []);

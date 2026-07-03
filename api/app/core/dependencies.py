@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
 from app.auth.constants import AUTH_COOKIE_NAME
 from app.core.security import AuthError, verify_access_token
+from database import get_session_factory
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -48,3 +51,10 @@ def require_authenticated_user(
     user = AuthenticatedUser(user_id=payload["sub"], email=payload.get("email"))
     request.state.authenticated_user = user
     return user
+
+
+def get_db() -> Iterator[Session]:
+    """Yield a database session bound to the shared engine pool."""
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        yield session

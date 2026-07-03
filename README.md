@@ -20,7 +20,7 @@ Demo login: `daniela@creatoros.demo` / `demo1234`
 | **Async by default** | Long-running AI jobs offloaded to Celery; API stays responsive |
 | **Operational readiness** | Structured JSON logs, request IDs, rate limiting, admin status endpoint |
 | **Data discipline** | SQLAlchemy models, Alembic migrations, `agent_runs` audit trail for every AI execution |
-| **Security thinking** | Bcrypt password auth, isolated demo auth module, production guardrails, HttpOnly JWT cookies |
+| **Security thinking** | Bcrypt password auth, JWT from cookie only in prod, multi-tenant row-level isolation, production guardrails |
 | **Cost awareness** | Token usage captured per agent run; mock provider for zero-cost production demo |
 
 ---
@@ -57,7 +57,15 @@ Deployed via [Vercel Services](https://vercel.com/docs/services) (`vercel.json`)
 
 ## Screenshots
 
-![CreatorOS Dashboard — daily briefing, trend alerts, platform analytics, and creator score](docs/screenshots/dashboard.png)
+| Screen | Preview |
+|---|---|
+| **Dashboard** | ![Dashboard](docs/screenshots/dashboard.png) |
+| **Trends** | ![Trends](docs/screenshots/trends-placeholder.svg) |
+| **Generator** | ![Generator](docs/screenshots/generator-placeholder.svg) |
+| **Calendar** | ![Calendar](docs/screenshots/calendar-placeholder.svg) |
+| **AI Coach** | ![Coach](docs/screenshots/coach-placeholder.svg) |
+
+> Replace placeholder SVGs with PNG/GIF captures from [the live demo](https://creator-os-gold.vercel.app) for portfolio polish.
 
 ---
 
@@ -122,10 +130,12 @@ Domain agents in `shared/agents/` — each with typed input/output, prompt templ
 | Decision | Choice | Tradeoff |
 |---|---|---|
 | **Monorepo** | `web/` + `api/` + `shared/` | Shared agents/DB without publishing packages; larger repo |
-| **Database** | MySQL (Hostinger / Docker) | Simple managed hosting; pgvector migration documented for later |
+| **Database** | MySQL (Hostinger prod, Docker local) | Honest choice for managed hosting; Postgres + pgvector documented as future path for embeddings |
 | **Auth** | Bcrypt + JWT (`auth_mode: password`) | Production uses hashed passwords; `DEMO_AUTH_ENABLED=true` only for local dev |
-| **Session transport** | HttpOnly cookie + Bearer fallback | Same-origin Vercel uses secure cookies; local cross-port keeps Bearer in storage |
+| **Session transport** | HttpOnly cookie (prod); Bearer in localStorage (cross-origin dev only) | Vercel same-origin uses secure cookies; `localhost:3000` → `:8000` keeps dev Bearer fallback |
+| **Multi-tenant isolation** | `user_id` from JWT only | No client-supplied `user_id`; repositories scope update/delete by owner |
 | **LLM on Vercel** | OpenRouter Hermes when keyed | Ollama cannot run serverless; mock blocked in production unless explicitly allowed |
+| **LLM errors** | Fail closed in production | Content generator returns 503 on provider failure; mock fallback only in dev/test |
 | **Trend signals** | RSS (`TREND_DATA_SOURCE=rss`) | Real public feeds without paid APIs; mock still available for offline dev |
 | **CI** | `CI_LITE=true` for tests | Reviewers run `make test` without private GitHub secrets; deploy job validates secrets |
 | **Async AI** | Celery + Redis | API stays fast; workers need separate Redis in production (Upstash) |
@@ -216,7 +226,7 @@ Production uses **bcrypt password hashing** (`auth_mode: password`). Demo auto-p
 
 **Vercel login:** `daniela@creatoros.demo` / `demo1234` (after `make seed` + migration `0004_user_password_hash`).
 
-JWT is set as an **HttpOnly cookie** on same-origin production; Bearer token remains in the response for local cross-origin dev.
+JWT is set as an **HttpOnly cookie** on same-origin production (`credentials: "include"` on all API calls). Bearer token is stored in `localStorage` **only** when `usesDevTokenStorage()` is true — cross-origin local dev (`NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1`). Production builds never read or write tokens from browser storage.
 
 ---
 
@@ -228,9 +238,9 @@ JWT is set as an **HttpOnly cookie** on same-origin production; Bearer token rem
 |---|---|
 | Health | `GET /health`, `GET /admin/system-status` |
 | Auth | `POST /auth/register`, `POST /auth/token`, `POST /auth/logout` |
-| Creator | `POST /creators`, `GET /creators/{id}`, `PATCH /creators/{id}/*` |
-| Trends | `GET /trends/latest`, `POST /trends/run-research` |
-| Content | `POST /content-ideas/generate`, `GET /content-ideas` |
+| Creator | `POST /creators`, `GET /creators/me`, `PATCH /creators/me/*` |
+| Trends | `GET /trends/latest`, `GET /trends/{id}`, `POST /trends/run-research` |
+| Content | `POST /content-ideas/generate`, `GET /content-ideas`, `PATCH /content-ideas/{id}/status` |
 | Calendar | `POST /calendar`, `GET /calendar`, `PATCH /calendar/{id}/*` |
 | Coach | `POST /coach/chat` |
 | Integrations | `GET /integrations/platforms`, `POST /integrations/platforms/{platform}/connect` |

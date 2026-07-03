@@ -185,31 +185,25 @@ async function request<T>(
   return (await response.json()) as T;
 }
 
-export async function getProfile(
-  userId: string = getActiveUserId(),
-): Promise<CreatorProfile | null> {
+export async function getProfile(): Promise<CreatorProfile | null> {
   try {
-    return await request<CreatorProfile>(`/creators/${encodeURIComponent(userId)}`);
+    return await request<CreatorProfile>("/creators/me");
   } catch {
     return null;
   }
 }
 
 /** @deprecated Use getProfile. Kept for compatibility — no longer creates fallback profiles. */
-export async function getOrCreateProfile(
-  userId: string = getActiveUserId(),
-): Promise<CreatorProfile> {
-  const profile = await getProfile(userId);
+export async function getOrCreateProfile(): Promise<CreatorProfile> {
+  const profile = await getProfile();
   if (!profile) {
     throw new Error("Creator profile not found. Re-run seed and sign in again.");
   }
   return profile;
 }
 
-export async function getTrends(userId: string = getActiveUserId(), limit = 10) {
-  return request<{ trends: TrendReport[] }>(
-    `/trends/latest?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
-  );
+export async function getTrends(limit = 10) {
+  return request<{ trends: TrendReport[] }>(`/trends/latest?limit=${limit}`);
 }
 
 export async function runTrendResearch(payload: {
@@ -223,10 +217,8 @@ export async function runTrendResearch(payload: {
   });
 }
 
-export async function getIdeas(userId: string = getActiveUserId(), limit = 50) {
-  return request<{ ideas: ContentIdea[] }>(
-    `/content-ideas?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
-  );
+export async function getIdeas(limit = 50) {
+  return request<{ ideas: ContentIdea[] }>(`/content-ideas?limit=${limit}`);
 }
 
 export async function generateIdea(payload: {
@@ -248,7 +240,6 @@ export async function generateIdea(payload: {
 }
 
 export async function saveIdea(payload: {
-  user_id: string;
   title: string;
   description: string;
   trend_report_id?: string;
@@ -261,14 +252,11 @@ export async function saveIdea(payload: {
   });
 }
 
-export async function getCalendar(userId: string = getActiveUserId(), limit = 100) {
-  return request<{ items: CalendarItem[] }>(
-    `/calendar?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
-  );
+export async function getCalendar(limit = 100) {
+  return request<{ items: CalendarItem[] }>(`/calendar?limit=${limit}`);
 }
 
 export async function createCalendarItem(payload: {
-  user_id: string;
   content_idea_id?: string;
   platform?: string;
   scheduled_for: string;
@@ -301,10 +289,7 @@ export async function moveCalendarItemDate(payload: {
   });
 }
 
-export async function askCoach(payload: {
-  user_id: string;
-  question: string;
-}): Promise<CoachResponse> {
+export async function askCoach(payload: { question: string }): Promise<CoachResponse> {
   return request<CoachResponse>(
     "/coach/chat",
     {

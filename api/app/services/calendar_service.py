@@ -19,9 +19,9 @@ class CalendarService:
     def __init__(self, repository: CalendarRepository | None = None) -> None:
         self.repository = repository or CalendarRepository()
 
-    def create_item(self, payload: CreateCalendarItemRequest) -> CalendarItemResponse:
+    def create_item(self, *, user_id: str, payload: CreateCalendarItemRequest) -> CalendarItemResponse:
         item = self.repository.create_item(
-            user_id=payload.user_id,
+            user_id=user_id,
             content_idea_id=payload.content_idea_id,
             platform=payload.platform,
             scheduled_for=payload.scheduled_for,
@@ -34,20 +34,22 @@ class CalendarService:
         items = self.repository.list_items(user_id=user_id, limit=limit)
         return ListCalendarItemsResponse(items=[self._to_response(item) for item in items])
 
-    def update_status(self, *, item_id: str, status: str) -> CalendarItemResponse:
-        item = self.repository.update_status(item_id=item_id, status=status)
+    def update_status(self, *, item_id: str, user_id: str, status: str) -> CalendarItemResponse:
+        item = self.repository.update_status(item_id=item_id, user_id=user_id, status=status)
         if item is None:
             raise LookupError("Calendar item not found.")
         return self._to_response(item)
 
-    def move_item_date(self, *, item_id: str, scheduled_for) -> CalendarItemResponse:
-        item = self.repository.move_item_date(item_id=item_id, scheduled_for=scheduled_for)
+    def move_item_date(self, *, item_id: str, user_id: str, scheduled_for) -> CalendarItemResponse:
+        item = self.repository.move_item_date(
+            item_id=item_id, user_id=user_id, scheduled_for=scheduled_for
+        )
         if item is None:
             raise LookupError("Calendar item not found.")
         return self._to_response(item)
 
-    def delete_item(self, *, item_id: str) -> DeleteCalendarItemResult:
-        deleted = self.repository.delete_item(item_id=item_id)
+    def delete_item(self, *, item_id: str, user_id: str) -> DeleteCalendarItemResult:
+        deleted = self.repository.delete_item(item_id=item_id, user_id=user_id)
         if not deleted:
             raise LookupError("Calendar item not found.")
         return DeleteCalendarItemResult(deleted=True)

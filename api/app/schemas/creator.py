@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 
 
 class CreatorProfileCreateRequest(BaseModel):
-    user_id: str = Field(min_length=1)
     handle: str = Field(min_length=1)
     niche: str | None = None
     bio: str | None = None

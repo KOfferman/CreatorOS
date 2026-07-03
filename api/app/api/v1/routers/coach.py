@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ai_core import AIProviderError
 
+from app.core.dependencies import AuthenticatedUser, require_authenticated_user
 from app.schemas.coach import CoachChatRequest, CoachChatResponse
 from app.services.coach_service import CoachService
 
@@ -15,10 +16,11 @@ def get_coach_service() -> CoachService:
 @router.post("/chat", response_model=CoachChatResponse)
 def coach_chat(
     payload: CoachChatRequest,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
     service: CoachService = Depends(get_coach_service),
 ) -> CoachChatResponse:
     try:
-        return service.chat(payload)
+        return service.chat(user_id=user.user_id, payload=payload)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except AIProviderError as exc:

@@ -39,13 +39,21 @@ class ContentIdeaRepository:
             session.refresh(idea)
             return idea
 
-    def get_by_id(self, *, idea_id: str) -> ContentIdea | None:
+    def get_by_id(self, *, idea_id: str, user_id: str) -> ContentIdea | None:
         with self.session_factory() as session:
-            return session.get(ContentIdea, idea_id)
+            return (
+                session.query(ContentIdea)
+                .filter(ContentIdea.id == idea_id, ContentIdea.user_id == user_id)
+                .one_or_none()
+            )
 
-    def update_status(self, *, idea_id: str, status: str) -> ContentIdea | None:
+    def update_status(self, *, idea_id: str, user_id: str, status: str) -> ContentIdea | None:
         with self.session_factory() as session:
-            idea = session.get(ContentIdea, idea_id)
+            idea = (
+                session.query(ContentIdea)
+                .filter(ContentIdea.id == idea_id, ContentIdea.user_id == user_id)
+                .one_or_none()
+            )
             if idea is None:
                 return None
             idea.status = status
@@ -54,9 +62,13 @@ class ContentIdeaRepository:
             session.refresh(idea)
             return idea
 
-    def delete(self, *, idea_id: str) -> bool:
+    def delete(self, *, idea_id: str, user_id: str) -> bool:
         with self.session_factory() as session:
-            idea = session.get(ContentIdea, idea_id)
+            idea = (
+                session.query(ContentIdea)
+                .filter(ContentIdea.id == idea_id, ContentIdea.user_id == user_id)
+                .one_or_none()
+            )
             if idea is None:
                 return False
             session.delete(idea)

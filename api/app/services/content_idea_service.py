@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.repositories.content_idea_repository import ContentIdeaRepository
+from app.repositories.trend_repository import TrendRepository
 from app.schemas.content_idea import (
     ContentIdeaResponse,
     GenerateContentIdeaRequest,
@@ -29,8 +30,13 @@ class DeleteContentIdeaResult:
 
 
 class ContentIdeaService:
-    def __init__(self, repository: ContentIdeaRepository | None = None) -> None:
+    def __init__(
+        self,
+        repository: ContentIdeaRepository | None = None,
+        trend_repository: TrendRepository | None = None,
+    ) -> None:
         self.repository = repository or ContentIdeaRepository()
+        self.trend_repository = trend_repository or TrendRepository()
         self.settings = get_settings()
 
     def generate_content_idea(self, payload: GenerateContentIdeaRequest) -> GeneratedContentIdeaResponse:
@@ -64,15 +70,27 @@ class ContentIdeaService:
                 status="draft",
             )
         except AIProviderError:
-            return self._mock_generated_idea(payload)
+            if self._allows_mock_fallback():
+                return self._mock_generated_idea(payload)
+            raise
+
+    def _allows_mock_fallback(self) -> bool:
+        return self.settings.environment.strip().lower() in {"development", "test"}
 
     def list_ideas(self, *, user_id: str, limit: int = 50) -> ListContentIdeasResponse:
         ideas = self.repository.list_by_user(user_id=user_id, limit=limit)
         return ListContentIdeasResponse(ideas=[self._to_response(idea) for idea in ideas])
 
-    def save_idea(self, payload: SaveContentIdeaRequest) -> ContentIdeaResponse:
+    def save_idea(self, *, user_id: str, payload: SaveContentIdeaRequest) -> ContentIdeaResponse:
+        if payload.trend_report_id:
+            trend = self.trend_repository.get_by_id(
+                trend_report_id=payload.trend_report_id,
+                user_id=user_id,
+            )
+            if trend is None:
+                raise LookupError("Trend report not found.")
         idea = self.repository.create(
-            user_id=payload.user_id,
+            user_id=user_id,
             title=payload.title,
             description=payload.description,
             status=payload.status,
@@ -81,14 +99,14 @@ class ContentIdeaService:
         )
         return self._to_response(idea)
 
-    def update_idea_status(self, *, idea_id: str, status: str) -> ContentIdeaResponse:
-        idea = self.repository.update_status(idea_id=idea_id, status=status)
+    def update_idea_status(self, *, idea_id: str, user_id: str, status: str) -> ContentIdeaResponse:
+        idea = self.repository.update_status(idea_id=idea_id, user_id=user_id, status=status)
         if idea is None:
             raise LookupError("Content idea not found.")
         return self._to_response(idea)
 
-    def delete_idea(self, *, idea_id: str) -> DeleteContentIdeaResult:
-        deleted = self.repository.delete(idea_id=idea_id)
+    def delete_idea(self, *, idea_id: str, user_id: str) -> DeleteContentIdeaResult:
+        deleted = self.repository.delete(idea_id=idea_id, user_id=user_id)
         if not deleted:
             raise LookupError("Content idea not found.")
         return DeleteContentIdeaResult(deleted=True)

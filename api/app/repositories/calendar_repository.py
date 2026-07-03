@@ -39,9 +39,13 @@ class CalendarRepository:
                 .all()
             )
 
-    def update_status(self, *, item_id: str, status: str) -> ContentCalendarItem | None:
+    def update_status(self, *, item_id: str, user_id: str, status: str) -> ContentCalendarItem | None:
         with self.session_factory() as session:
-            item = session.get(ContentCalendarItem, item_id)
+            item = (
+                session.query(ContentCalendarItem)
+                .filter(ContentCalendarItem.id == item_id, ContentCalendarItem.user_id == user_id)
+                .one_or_none()
+            )
             if item is None:
                 return None
             item.status = status
@@ -50,9 +54,13 @@ class CalendarRepository:
             session.refresh(item)
             return item
 
-    def move_item_date(self, *, item_id: str, scheduled_for) -> ContentCalendarItem | None:
+    def move_item_date(self, *, item_id: str, user_id: str, scheduled_for) -> ContentCalendarItem | None:
         with self.session_factory() as session:
-            item = session.get(ContentCalendarItem, item_id)
+            item = (
+                session.query(ContentCalendarItem)
+                .filter(ContentCalendarItem.id == item_id, ContentCalendarItem.user_id == user_id)
+                .one_or_none()
+            )
             if item is None:
                 return None
             item.scheduled_for = scheduled_for
@@ -61,9 +69,13 @@ class CalendarRepository:
             session.refresh(item)
             return item
 
-    def delete_item(self, *, item_id: str) -> bool:
+    def delete_item(self, *, item_id: str, user_id: str) -> bool:
         with self.session_factory() as session:
-            item = session.get(ContentCalendarItem, item_id)
+            item = (
+                session.query(ContentCalendarItem)
+                .filter(ContentCalendarItem.id == item_id, ContentCalendarItem.user_id == user_id)
+                .one_or_none()
+            )
             if item is None:
                 return False
             session.delete(item)

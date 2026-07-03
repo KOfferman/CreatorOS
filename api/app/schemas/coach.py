@@ -11,7 +11,6 @@ _DISALLOWED_PATTERNS = (
 
 
 class CoachChatRequest(BaseModel):
-    user_id: str = Field(min_length=1, max_length=120)
     question: str = Field(min_length=1, max_length=2000)
 
     @field_validator("question")

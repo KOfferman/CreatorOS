@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Bot, Send, Trash2 } from "lucide-react";
 
-import { ApiRequestError, askCoach, getActiveUserId } from "../../lib/api";
+import { ApiRequestError, askCoach } from "../../lib/api";
 import { clearSession } from "../../lib/auth";
 
 type Message = {
@@ -89,7 +89,7 @@ export function CoachScreen() {
     setInput("");
     setLoading(true);
     try {
-      const response = await askCoach({ user_id: getActiveUserId(), question: text });
+      const response = await askCoach({ question: text });
       if (response.llm_provider) {
         const label =
           response.llm_provider === "mock"

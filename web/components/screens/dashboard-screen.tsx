@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 
 import {
-  getActiveUserId,
   getCalendar,
   getIdeas,
   getProfile,
@@ -44,13 +43,12 @@ export function DashboardScreen() {
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([]);
 
   useEffect(() => {
-    const userId = getActiveUserId();
     const load = async () => {
       const [p, t, i, c] = await Promise.all([
-        getProfile(userId).catch(() => null),
-        getTrends(userId).catch(() => ({ trends: [] })),
-        getIdeas(userId).catch(() => ({ ideas: [] })),
-        getCalendar(userId).catch(() => ({ items: [] })),
+        getProfile().catch(() => null),
+        getTrends().catch(() => ({ trends: [] })),
+        getIdeas().catch(() => ({ ideas: [] })),
+        getCalendar().catch(() => ({ items: [] })),
       ]);
       setProfile(p);
       setTrends(t.trends);

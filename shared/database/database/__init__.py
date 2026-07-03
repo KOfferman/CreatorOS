@@ -9,7 +9,7 @@ from .models import (
     TrendReport,
     User,
 )
-from .session import get_engine, get_session_factory
+from .session import get_engine, get_session_factory, reset_database_engine
 
 __all__ = [
     "Base",
@@ -23,4 +23,5 @@ __all__ = [
     "AudienceInsight",
     "get_engine",
     "get_session_factory",
+    "reset_database_engine",
 ]

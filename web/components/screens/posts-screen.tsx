@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Eye, Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
 
-import { getActiveUserId, getIdeas, type ContentIdea } from "../../lib/api";
+import { getIdeas, type ContentIdea } from "../../lib/api";
 import { IgIcon } from "../ui/platform-icons";
 
 export function PostsScreen() {
@@ -11,7 +11,7 @@ export function PostsScreen() {
   const [ideas, setIdeas] = useState<ContentIdea[]>([]);
 
   useEffect(() => {
-    void getIdeas(getActiveUserId())
+    void getIdeas()
       .then((result) => setIdeas(result.ideas))
       .catch(() => setIdeas([]));
   }, []);

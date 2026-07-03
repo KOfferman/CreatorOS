@@ -7,7 +7,6 @@ import { Check, Copy, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import {
   createCalendarItem,
   generateIdea,
-  getActiveUserId,
   getProfile,
   saveIdea,
 } from "../../lib/api";
@@ -32,8 +31,7 @@ export function GeneratorScreen() {
   useEffect(() => {
     const initialTopic = searchParams.get("topic");
     if (initialTopic) setTopic(initialTopic);
-    const userId = getActiveUserId();
-    void getProfile(userId)
+    void getProfile()
       .then((profile) => {
         if (!profile) return;
         if (profile.niche) setAudience(profile.niche);
@@ -82,9 +80,7 @@ export function GeneratorScreen() {
     if (!generated.trim()) return;
     setSaveLoading(true);
     try {
-      const userId = getActiveUserId();
       const idea = await saveIdea({
-        user_id: userId,
         title: topic || "Generated content",
         description: generated,
         status: "draft",
@@ -93,7 +89,6 @@ export function GeneratorScreen() {
       scheduled.setDate(scheduled.getDate() + 1);
       scheduled.setHours(9, 0, 0, 0);
       await createCalendarItem({
-        user_id: userId,
         content_idea_id: idea.id,
         platform: plat,
         scheduled_for: scheduled.toISOString(),
