@@ -8,6 +8,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 logger = logging.getLogger(__name__)
 
 
+def _json_safe_validation_errors(exc: RequestValidationError) -> list[dict]:
+    safe_errors: list[dict] = []
+    for error in exc.errors():
+        item = dict(error)
+        ctx = item.get("ctx")
+        if isinstance(ctx, dict):
+            item["ctx"] = {key: str(value) for key, value in ctx.items()}
+        safe_errors.append(item)
+    return safe_errors
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(
@@ -36,7 +47,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error": {
                     "code": "validation_error",
                     "message": "Request validation failed.",
-                    "details": exc.errors(),
+                    "details": _json_safe_validation_errors(exc),
                     "request_id": getattr(request.state, "request_id", None),
                 }
             },

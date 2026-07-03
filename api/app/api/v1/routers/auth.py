@@ -10,9 +10,11 @@ router = APIRouter(prefix="/auth")
 
 @router.post("/token", response_model=AuthTokenResponse)
 def issue_access_token(payload: AuthTokenRequest) -> AuthTokenResponse:
+    """Demo auth: accepts any email + password (>= 8 chars) and auto-provisions users.
+
+    Not for production. See docs/SECURITY.md for the auth hardening roadmap.
+    """
     settings = get_settings()
-    # Placeholder auth foundation: any strong-enough password is accepted for local/dev flows.
-    # This endpoint still ties tokens to a persisted user record.
     session_factory = get_session_factory()
     with session_factory() as session:
         user = session.query(User).filter(User.email == payload.email).one_or_none()
@@ -27,4 +29,5 @@ def issue_access_token(payload: AuthTokenRequest) -> AuthTokenResponse:
         access_token=token,
         expires_in_seconds=settings.auth_access_token_exp_minutes * 60,
         user_id=user.id,
+        auth_mode="demo",
     )

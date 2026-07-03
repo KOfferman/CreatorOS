@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.pyo
+*.pyd
+
+# Node / frontend
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+pnpm-lock.yaml.bak
+
+# Environment & secrets — never commit
+.env
+.env.local
+.env.*.local
+!.env.example
+!.github/env.production.example
+
+# Local production override for GitHub env sync (never commit)
+.github/env.production.local
+
+# Local databases & caches
+*.db
+*.sqlite3
+creatoros_dev.db
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Design exports / large binaries
+*.zip
+_figma_design/
+
+# Cursor / tooling
+.cursor/

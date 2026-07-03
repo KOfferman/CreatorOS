@@ -1,9 +1,0 @@
-Metadata-Version: 2.4
-Name: creatoros-database
-Version: 0.1.0
-Summary: Database models and migrations for CreatorOS.
-Requires-Python: >=3.11
-Requires-Dist: sqlalchemy>=2.0.31
-Requires-Dist: pymysql>=1.1.1
-Requires-Dist: alembic>=1.13.2
-Requires-Dist: pydantic-settings>=2.4.0

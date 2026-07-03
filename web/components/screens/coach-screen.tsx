@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, Send } from "lucide-react";
+import { Bot, Send, Trash2 } from "lucide-react";
 
-import { askCoach, getActiveUserId } from "../../lib/api";
+import { ApiRequestError, askCoach, getActiveUserId } from "../../lib/api";
+import { clearSession } from "../../lib/auth";
 
 type Message = {
   id: string;
@@ -13,14 +15,6 @@ type Message = {
   content: string;
   createdAt: string;
 };
-
-const HISTORY_KEY = "creatoros.coach.history.v1";
-const SUGGESTED_QUESTIONS = [
-  "Why is my reach dropping?",
-  "Best posting times for my audience",
-  "How to improve my hook rate",
-  "Content pillars for my niche",
-];
 
 function newMessage(role: "user" | "assistant", content: string): Message {
   return {
@@ -31,31 +25,56 @@ function newMessage(role: "user" | "assistant", content: string): Message {
   };
 }
 
+const HISTORY_KEY = "creatoros.coach.history.v1";
+const WELCOME_MESSAGE = newMessage(
+  "assistant",
+  "Hey! 👋 I've analyzed your recent content signals. Ready to push your growth even higher?",
+);
+
+function isStaleCoachError(content: string): boolean {
+  const lowered = content.toLowerCase();
+  return (
+    lowered.includes("couldn't reach the coach") ||
+    lowered.includes("cannot reach the api") ||
+    lowered.includes("missing bearer token") ||
+    lowered.includes("coach llm unavailable") ||
+    lowered.includes("verify the api is running")
+  );
+}
+
+function loadCoachHistory(): Message[] {
+  if (typeof window === "undefined") return [WELCOME_MESSAGE];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [WELCOME_MESSAGE];
+    const parsed = JSON.parse(raw) as Message[];
+    if (!Array.isArray(parsed) || !parsed.length) return [WELCOME_MESSAGE];
+    const cleaned = parsed.filter((msg) => !(msg.role === "assistant" && isStaleCoachError(msg.content)));
+    return cleaned.length ? cleaned : [WELCOME_MESSAGE];
+  } catch {
+    return [WELCOME_MESSAGE];
+  }
+}
+
+const SUGGESTED_QUESTIONS = [
+  "Why is my reach dropping?",
+  "Best posting times for my audience",
+  "How to improve my hook rate",
+  "Content pillars for my niche",
+];
+
 export function CoachScreen() {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(HISTORY_KEY);
-      if (!raw) {
-        return [
-          newMessage(
-            "assistant",
-            "Hey! 👋 I've analyzed your recent content signals. Ready to push your growth even higher?",
-          ),
-        ];
-      }
-      const parsed = JSON.parse(raw) as Message[];
-      return Array.isArray(parsed) && parsed.length ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
+  const router = useRouter();
+  const [messages, setMessages] = useState<Message[]>(() => loadCoachHistory());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(messages));
+    const persistable = messages.filter(
+      (msg) => !(msg.role === "assistant" && isStaleCoachError(msg.content)),
+    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(persistable));
   }, [messages]);
 
   useEffect(() => {
@@ -78,21 +97,45 @@ export function CoachScreen() {
         response.risk_warning ? `\n\n⚠️ ${response.risk_warning}` : "",
       ].join("");
       setMessages((m) => [...m, newMessage("assistant", body)]);
-    } catch {
-      setMessages((m) => [
-        ...m,
-        newMessage("assistant", "I couldn't reach the coach service. Please verify the API is running."),
-      ]);
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        clearSession();
+        router.replace("/login");
+        return;
+      }
+      const message =
+        error instanceof Error
+          ? error.message
+          : "I couldn't reach the coach service. Please verify the API is running with `cd api && make dev`.";
+      setMessages((m) => [...m, newMessage("assistant", message)]);
     } finally {
       setLoading(false);
     }
   };
 
+  const clearChat = () => {
+    if (loading) return;
+    setInput("");
+    setMessages([WELCOME_MESSAGE]);
+    localStorage.removeItem(HISTORY_KEY);
+  };
+
   return (
     <div className="flex h-full flex-col" style={{ maxHeight: "calc(100vh - 120px)" }}>
-      <div className="mb-5 flex-shrink-0">
-        <h1 className="mb-1 text-[1.65rem] font-extrabold text-white">Growth Coach</h1>
-        <p className="text-sm text-[#717182]">Your AI-powered strategy advisor · Available 24/7</p>
+      <div className="mb-5 flex flex-shrink-0 items-start justify-between gap-4">
+        <div>
+          <h1 className="mb-1 text-[1.65rem] font-extrabold text-white">Growth Coach</h1>
+          <p className="text-sm text-[#717182]">Your AI-powered strategy advisor · Available 24/7</p>
+        </div>
+        <button
+          type="button"
+          onClick={clearChat}
+          disabled={loading || messages.length <= 1}
+          className="flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/5 px-3 py-1.5 text-xs text-[#717182] transition-all hover:border-white/15 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Trash2 size={13} />
+          Clear chat
+        </button>
       </div>
 
       <div className="scrollbar-hide mb-4 flex-1 space-y-4 overflow-y-auto">
@@ -133,6 +176,9 @@ export function CoachScreen() {
                   />
                 ))}
               </div>
+              <p className="mt-2 text-xs text-[#717182]">
+                Hermes is thinking — the first reply can take up to 60 seconds.
+              </p>
             </div>
           </div>
         ) : null}

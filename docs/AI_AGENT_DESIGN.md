@@ -39,6 +39,15 @@ CreatorOS agents are designed to be:
 - `generate_json`
 - `stream_text`
 
+| Provider | Status |
+|---|---|
+| OpenAI | Implemented (`OpenAIProvider`) |
+| Claude | Extension point (interface only) |
+| Gemini | Extension point (interface only) |
+| OpenRouter | Extension point (interface only) |
+| Hermes (local) | Extension point (interface only) |
+| Mock | Implemented for local dev |
+
 This isolates vendor changes from application logic and allows:
 - provider swapping
 - differential testing

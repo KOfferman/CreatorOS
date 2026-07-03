@@ -1,7 +1,0 @@
-pyproject.toml
-ai_core/__init__.py
-ai_core/providers.py
-creatoros_ai_core.egg-info/PKG-INFO
-creatoros_ai_core.egg-info/SOURCES.txt
-creatoros_ai_core.egg-info/dependency_links.txt
-creatoros_ai_core.egg-info/top_level.txt

@@ -45,6 +45,14 @@ def app():
 
 
 @pytest.fixture()
+def auth_headers() -> dict[str, str]:
+    from app.core.security import create_access_token
+
+    token = create_access_token(subject="user-1", email="test@example.com")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture()
 def client(app) -> Iterator[TestClient]:
     with TestClient(app) as c:
         yield c

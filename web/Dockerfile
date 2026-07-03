@@ -1,25 +1,35 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-COPY package.json package.json
-COPY web/package.json web/package.json
-RUN npm install
+RUN corepack enable
+
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules node_modules
-COPY . .
-RUN npm --workspace web run build
+
+RUN corepack enable
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY web/ .
+
+ARG NEXT_PUBLIC_API_BASE_URL=/api/v1
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+RUN pnpm build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
 
-COPY --from=builder /app/web/.next web/.next
-COPY --from=builder /app/web/public web/public
-COPY --from=builder /app/web/package.json web/package.json
-COPY --from=builder /app/web/next.config.js web/next.config.js
-COPY --from=builder /app/node_modules node_modules
+RUN corepack enable
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
-CMD ["npm", "run", "start", "--prefix", "web"]
+CMD ["pnpm", "start"]

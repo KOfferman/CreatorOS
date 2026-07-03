@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from ai_core import AIProviderError
 
 from app.schemas.coach import CoachChatRequest, CoachChatResponse
 from app.services.coach_service import CoachService
@@ -18,4 +20,9 @@ def coach_chat(
     try:
         return service.chat(payload)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except AIProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Coach LLM unavailable ({service.settings.llm_provider}): {exc}",
+        ) from exc

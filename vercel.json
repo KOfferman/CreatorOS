@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "web",
+      "framework": "nextjs",
+      "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+      "buildCommand": "pnpm build"
+    },
+    "api": {
+      "root": "api",
+      "entrypoint": "app.main:app",
+      "installCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+      "functions": {
+        "app/main.py": {
+          "maxDuration": 60,
+          "excludeFiles": "{tests/**,**/__pycache__/**,**/*.pyc,.venv/**,**/.pytest_cache/**}"
+        }
+      }
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/health", "destination": { "service": "api" } },
+    { "source": "/healthz", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}

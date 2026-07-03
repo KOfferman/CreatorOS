@@ -1,7 +1,10 @@
 import { getAuthHeaders, getUserId as getStoredUserId } from "./auth";
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  (process.env.NODE_ENV === "production"
+    ? "/api/v1"
+    : "http://localhost:8000/api/v1");
 export const DEFAULT_USER_ID =
   process.env.NEXT_PUBLIC_CREATOR_USER_ID ?? "demo-user";
 
@@ -105,21 +108,52 @@ export async function disconnectPlatform(platform: string): Promise<{ platform: 
   );
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  options?: { timeoutMs?: number },
+): Promise<T> {
+  const timeoutMs = options?.timeoutMs ?? 0;
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const timeoutId =
+    controller && timeoutMs > 0
+      ? globalThis.setTimeout(() => controller.abort(), timeoutMs)
+      : null;
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
+      signal: controller?.signal,
       headers: {
         "Content-Type": "application/json",
         ...getAuthHeaders(),
         ...(init?.headers ?? {}),
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(
+        "The coach is still thinking — Hermes can take up to 60 seconds on the first reply. Please try again and wait a bit longer.",
+      );
+    }
     throw new Error(
-      `Cannot reach the API at ${API_BASE_URL}. Start it from api/ with: .venv/bin/uvicorn app.main:app --reload --port 8000`,
+      `Cannot reach the API at ${API_BASE_URL}. Start it from api/ with: cd api && make dev`,
     );
+  } finally {
+    if (timeoutId !== null) {
+      globalThis.clearTimeout(timeoutId);
+    }
   }
 
   if (!response.ok) {
@@ -131,7 +165,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // keep raw body
     }
-    throw new Error(message || `API ${response.status}`);
+    throw new ApiRequestError(message || `API ${response.status}`, response.status);
   }
 
   return (await response.json()) as T;
@@ -257,8 +291,12 @@ export async function askCoach(payload: {
   user_id: string;
   question: string;
 }): Promise<CoachResponse> {
-  return request<CoachResponse>("/coach/chat", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return request<CoachResponse>(
+    "/coach/chat",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { timeoutMs: 120_000 },
+  );
 }

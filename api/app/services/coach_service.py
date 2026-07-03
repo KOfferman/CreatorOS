@@ -2,11 +2,11 @@ import logging
 import time
 
 from agents import GrowthCoachAgent, GrowthCoachInput
-from ai_core import build_provider
 
 from app.core.config import get_settings
 from app.repositories.coach_repository import CoachRepository
 from app.schemas.coach import CoachChatRequest, CoachChatResponse
+from app.services.llm_factory import build_llm_provider
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,7 @@ class CoachService:
         if context.user is None:
             raise LookupError("User not found.")
 
-        provider = build_provider(
-            provider_name=self.settings.llm_provider,
-            api_key=self.settings.openai_api_key,
-            model=self.settings.openai_model,
-        )
+        provider = build_llm_provider(self.settings)
 
         agent = GrowthCoachAgent(llm_provider=provider)
         execution = agent.run(

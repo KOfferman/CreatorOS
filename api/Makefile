@@ -1,7 +1,11 @@
-.PHONY: up down logs api worker web migrate
+.PHONY: up down logs api worker web migrate dev
 
 up:
 	docker compose up --build
+
+dev:
+	@chmod +x scripts/dev.sh
+	@./scripts/dev.sh
 
 down:
 	docker compose down

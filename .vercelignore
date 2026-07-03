@@ -1,0 +1,13 @@
+_figma_design
+mobile
+docs/screenshots
+*.db
+*.sqlite3
+api/.venv
+web/.next
+.git
+.cursor
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+Content Creator Dashboard Design.zip

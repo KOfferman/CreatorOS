@@ -38,10 +38,14 @@ This architecture is optimized for:
   - deterministic schemas, provider-agnostic execution, token/cost capture
 
 ## Storage and State
-- **Primary DB:** MySQL
+- **Primary DB (current):** MySQL — relational data for users, trends, content ideas, calendar, social accounts, and agent runs
+- **Primary DB (planned):** PostgreSQL + pgvector — semantic memory, audience embeddings, and RAG over creator history
 - **Queue + result backend:** Redis
 - **Durable execution history:** `agent_runs` table
 - **Operational signals:** structured logs + request IDs + admin status endpoint
+
+### Why MySQL now, PostgreSQL + pgvector next
+MySQL keeps local iteration and Hostinger-style deployment simple for the MVP. Vector search and long-term AI memory (similar trends, audience clusters, coaching context retrieval) are better served by pgvector. The migration path is Alembic-managed schema + a provider swap in `DATABASE_URL`; agent and API layers stay unchanged.
 
 ## Deployment Topology (Recommended)
 - **Edge/CDN:** static assets + request shielding

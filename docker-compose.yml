@@ -1,0 +1,6 @@
+# Run the full CreatorOS stack from the repo root.
+# Requires: cp api/.env.example api/.env  (set AUTH_SECRET to 24+ chars)
+name: creatoros
+
+include:
+  - path: api/docker-compose.yml

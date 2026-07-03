@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -11,3 +13,4 @@ class AuthTokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in_seconds: int
     user_id: str
+    auth_mode: Literal["demo"] = "demo"

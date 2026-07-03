@@ -7,7 +7,7 @@ from app.api.v1.routers.coach import router as coach_router
 from app.api.v1.routers.content_ideas import router as content_ideas_router
 from app.api.v1.routers.creators import router as creators_router
 from app.api.v1.routers.health import router as health_router
-from app.api.v1.routers.integrations import router as integrations_router
+from app.api.v1.routers.integrations import legacy_social_router, router as integrations_router
 from app.api.v1.routers.tasks import router as tasks_router
 from app.api.v1.routers.trends import router as trends_router
 from app.core.dependencies import require_authenticated_user
@@ -34,6 +34,7 @@ api_v1_router.include_router(
     coach_router, tags=["coach"], dependencies=[Depends(require_authenticated_user)]
 )
 api_v1_router.include_router(integrations_router, tags=["integrations"])
+api_v1_router.include_router(legacy_social_router, tags=["integrations"])
 api_v1_router.include_router(
     admin_router, tags=["admin"], dependencies=[Depends(require_authenticated_user)]
 )

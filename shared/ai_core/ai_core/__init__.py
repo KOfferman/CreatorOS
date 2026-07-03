@@ -7,14 +7,15 @@ from .providers import (
     BaseLLMProvider,
     ClaudeProvider,
     GeminiProvider,
-    HermesLocalProvider,
     JSONGenerationResult,
+    MockLLMProvider,
+    OpenAICompatibleProvider,
     OpenAIProvider,
-    OpenRouterProvider,
     StreamTextEvent,
     TextGenerationResult,
     TokenUsage,
     build_provider,
+    extract_json_object,
 )
 
 __all__ = [
@@ -28,10 +29,11 @@ __all__ = [
     "JSONGenerationResult",
     "StreamTextEvent",
     "BaseLLMProvider",
+    "OpenAICompatibleProvider",
     "OpenAIProvider",
+    "MockLLMProvider",
     "ClaudeProvider",
     "GeminiProvider",
-    "OpenRouterProvider",
-    "HermesLocalProvider",
     "build_provider",
+    "extract_json_object",
 ]

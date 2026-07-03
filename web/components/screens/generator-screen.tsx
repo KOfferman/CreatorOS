@@ -35,6 +35,7 @@ export function GeneratorScreen() {
     const userId = getActiveUserId();
     void getProfile(userId)
       .then((profile) => {
+        if (!profile) return;
         if (profile.niche) setAudience(profile.niche);
         if (profile.creator_voice) setTone(profile.creator_voice.split(",")[0]?.trim() ?? "Authentic");
       })

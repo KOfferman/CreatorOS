@@ -1,4 +1,0 @@
-sqlalchemy>=2.0.31
-pymysql>=1.1.1
-alembic>=1.13.2
-pydantic-settings>=2.4.0

@@ -1,6 +1,0 @@
-Metadata-Version: 2.4
-Name: creatoros-shared
-Version: 0.1.0
-Summary: Shared schemas and types for CreatorOS services.
-Requires-Python: >=3.11
-Requires-Dist: pydantic>=2.8.0

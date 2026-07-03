@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#0F0F1C"/>
+  <rect x="40" y="40" width="1120" height="595" rx="16" fill="#1A1A2E" stroke="#2D2D44" stroke-width="2"/>
+  <text x="600" y="320" fill="#717182" font-family="system-ui,sans-serif" font-size="28" text-anchor="middle">Content Calendar</text>
+  <text x="600" y="360" fill="#4B4B6A" font-family="system-ui,sans-serif" font-size="16" text-anchor="middle">Screenshot placeholder  replace with product capture</text>
+</svg>
