@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, Globe, Loader2, Zap } from "lucide-react";
+import { Bell, Check, Globe, Loader2, Zap } from "lucide-react";
 
 import { getSession } from "../../lib/auth";
 import {
@@ -24,6 +24,53 @@ const PLATFORM_ICONS: Record<string, ReactNode> = {
   pinterest: <Globe size={18} className="text-[#717182]" />,
 };
 
+const NOTIFICATION_PREFS_KEY = "creatoros.notification_prefs";
+
+const NOTIFICATION_OPTIONS = [
+  {
+    id: "new_subscriber_alerts",
+    label: "New subscriber alerts",
+    description: "Get notified when someone subscribes to your content.",
+  },
+  {
+    id: "review_moderation_queue",
+    label: "Review moderation queue",
+    description: "Alerts when comments or reviews need moderation.",
+  },
+  {
+    id: "weekly_revenue_digest",
+    label: "Weekly revenue digest",
+    description: "A summary of earnings, tips, and brand deals each week.",
+  },
+  {
+    id: "payout_confirmations",
+    label: "Payout confirmations",
+    description: "Confirmations when payouts are initiated or deposited.",
+  },
+] as const;
+
+type NotificationPrefId = (typeof NOTIFICATION_OPTIONS)[number]["id"];
+type NotificationPrefs = Record<NotificationPrefId, boolean>;
+
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  new_subscriber_alerts: true,
+  review_moderation_queue: true,
+  weekly_revenue_digest: true,
+  payout_confirmations: true,
+};
+
+function loadNotificationPrefs(): NotificationPrefs {
+  if (typeof window === "undefined") return DEFAULT_NOTIFICATION_PREFS;
+  try {
+    const raw = window.localStorage.getItem(NOTIFICATION_PREFS_KEY);
+    if (!raw) return DEFAULT_NOTIFICATION_PREFS;
+    const parsed = JSON.parse(raw) as Partial<NotificationPrefs>;
+    return { ...DEFAULT_NOTIFICATION_PREFS, ...parsed };
+  } catch {
+    return DEFAULT_NOTIFICATION_PREFS;
+  }
+}
+
 export function SettingsScreen() {
   const [activeModel, setActiveModel] = useState("claude");
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
@@ -36,6 +83,9 @@ export function SettingsScreen() {
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
   const [platformMessage, setPlatformMessage] = useState<string | null>(null);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(
+    DEFAULT_NOTIFICATION_PREFS,
+  );
   const searchParams = useSearchParams();
   const session = getSession();
 
@@ -61,6 +111,10 @@ export function SettingsScreen() {
       setProfile(result);
       setUserInput(result.user ?? result.handle);
     });
+  }, []);
+
+  useEffect(() => {
+    setNotificationPrefs(loadNotificationPrefs());
   }, []);
 
   useEffect(() => {
@@ -139,6 +193,14 @@ export function SettingsScreen() {
   function trimmedUser(value: string) {
     return value.trim().replace(/^@+/, "").toLowerCase();
   }
+
+  const toggleNotification = (id: NotificationPrefId) => {
+    setNotificationPrefs((current) => {
+      const next = { ...current, [id]: !current[id] };
+      window.localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -258,6 +320,44 @@ export function SettingsScreen() {
               );
             })
           )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/5 bg-[#0F0F1C] p-5">
+        <div className="mb-1 flex items-center gap-2">
+          <Bell size={14} className="text-violet-400" />
+          <h3 className="text-sm font-bold text-white">Notifications</h3>
+        </div>
+        <p className="mb-4 text-xs text-[#717182]">
+          Choose which updates you receive by email and in-app.
+        </p>
+        <div className="space-y-2">
+          {NOTIFICATION_OPTIONS.map((option) => {
+            const enabled = notificationPrefs[option.id];
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => toggleNotification(option.id)}
+                className={`flex w-full items-start gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
+                  enabled
+                    ? "border-violet-500/25 bg-violet-500/10"
+                    : "border-white/5 bg-white/[0.02] hover:border-white/12"
+                }`}
+              >
+                <div
+                  className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 rounded-full border-2 transition-all ${
+                    enabled ? "border-violet-400 bg-violet-400" : "border-white/20"
+                  }`}
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-white">{option.label}</p>
+                  <p className="text-xs text-[#717182]">{option.description}</p>
+                </div>
+                {enabled ? <Check size={14} className="mt-0.5 flex-shrink-0 text-violet-400" /> : null}
+              </button>
+            );
+          })}
         </div>
       </div>
 
