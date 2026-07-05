@@ -4,6 +4,7 @@ from app.core.dependencies import AuthenticatedUser, require_authenticated_user
 from app.schemas.creator import (
     CreatorProfileCreateRequest,
     CreatorProfileResponse,
+    SaveCreatorSettingsRequest,
     UpdateCreatorVoiceRequest,
     UpdateNicheRequest,
     UpdateTargetPlatformsRequest,
@@ -91,6 +92,20 @@ def update_my_user(
 ) -> CreatorProfileResponse:
     try:
         return service.update_user(user_id=user.user_id, user=payload.user)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.patch("/me/settings", response_model=CreatorProfileResponse)
+def save_my_settings(
+    payload: SaveCreatorSettingsRequest,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
+    service: CreatorService = Depends(get_creator_service),
+) -> CreatorProfileResponse:
+    try:
+        return service.save_settings(user_id=user.user_id, payload=payload)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:

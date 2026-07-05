@@ -19,6 +19,16 @@ class FakeCreatorService:
             "target_platforms": payload.target_platforms,
             "creator_voice": payload.creator_voice,
             "audience_size": payload.audience_size,
+            "settings": {
+                "notification_prefs": {
+                    "new_subscriber_alerts": True,
+                    "review_moderation_queue": True,
+                    "weekly_revenue_digest": True,
+                    "payout_confirmations": True,
+                },
+                "ai_provider": "claude",
+                "stripe_payout_status": "disconnected",
+            },
         }
 
 

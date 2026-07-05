@@ -37,6 +37,12 @@ export async function login(email: string, password: string): Promise<AuthTokenR
   });
 }
 
+export type CreatorSettings = {
+  notification_prefs: Record<string, boolean>;
+  ai_provider: string;
+  stripe_payout_status: "disconnected" | "connected" | "payouts_enabled";
+};
+
 export type CreatorProfile = {
   id: string;
   user_id: string;
@@ -47,6 +53,7 @@ export type CreatorProfile = {
   target_platforms: string[];
   creator_voice: string | null;
   audience_size: number | null;
+  settings?: CreatorSettings;
 };
 
 export type TrendReport = {
@@ -175,8 +182,15 @@ async function request<T>(
     const body = await response.text();
     let message = body;
     try {
-      const parsed = JSON.parse(body) as { error?: { message?: string }; detail?: string };
-      message = parsed.error?.message ?? parsed.detail ?? body;
+      const parsed = JSON.parse(body) as {
+        error?: { message?: string };
+        detail?: string | Array<{ msg?: string }>;
+      };
+      if (Array.isArray(parsed.detail)) {
+        message = parsed.detail.map((item) => item.msg).filter(Boolean).join("; ") || message;
+      } else {
+        message = parsed.error?.message ?? parsed.detail ?? body;
+      }
     } catch {
       // keep raw body
     }
@@ -198,6 +212,18 @@ export async function updateUser(user: string): Promise<CreatorProfile> {
   return request<CreatorProfile>("/creators/me/user", {
     method: "PATCH",
     body: JSON.stringify({ user }),
+  });
+}
+
+export async function saveCreatorSettings(payload: {
+  user?: string;
+  notification_prefs?: Record<string, boolean>;
+  ai_provider?: string;
+  stripe_payout_status?: CreatorSettings["stripe_payout_status"];
+}): Promise<CreatorProfile> {
+  return request<CreatorProfile>("/creators/me/settings", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 }
 

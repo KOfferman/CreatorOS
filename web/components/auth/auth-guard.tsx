@@ -20,6 +20,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     const validate = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/creators/me`, {
+          credentials: "include",
           headers: getAuthHeaders(),
         });
         if (!response.ok) {

@@ -10,9 +10,10 @@ import {
   disconnectPlatform,
   getPlatformConnections,
   getProfile,
+  saveCreatorSettings,
   startPlatformConnection,
-  updateUser,
   type CreatorProfile,
+  type CreatorSettings,
   type PlatformConnection,
 } from "../../lib/api";
 import { IgIcon, TtIcon, YtIcon } from "../ui/platform-icons";
@@ -23,8 +24,6 @@ const PLATFORM_ICONS: Record<string, ReactNode> = {
   youtube: <YtIcon size={20} />,
   pinterest: <Globe size={18} className="text-[#717182]" />,
 };
-
-const NOTIFICATION_PREFS_KEY = "creatoros.notification_prefs";
 
 const NOTIFICATION_OPTIONS = [
   {
@@ -59,25 +58,39 @@ const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   payout_confirmations: true,
 };
 
-function loadNotificationPrefs(): NotificationPrefs {
-  if (typeof window === "undefined") return DEFAULT_NOTIFICATION_PREFS;
-  try {
-    const raw = window.localStorage.getItem(NOTIFICATION_PREFS_KEY);
-    if (!raw) return DEFAULT_NOTIFICATION_PREFS;
-    const parsed = JSON.parse(raw) as Partial<NotificationPrefs>;
-    return { ...DEFAULT_NOTIFICATION_PREFS, ...parsed };
-  } catch {
-    return DEFAULT_NOTIFICATION_PREFS;
-  }
+type SettingsSnapshot = {
+  user: string;
+  ai_provider: string;
+  notification_prefs: NotificationPrefs;
+};
+
+function normalizeSettings(settings?: CreatorSettings): Omit<SettingsSnapshot, "user"> {
+  return {
+    ai_provider: settings?.ai_provider ?? "claude",
+    notification_prefs: {
+      ...DEFAULT_NOTIFICATION_PREFS,
+      ...(settings?.notification_prefs as Partial<NotificationPrefs> | undefined),
+    },
+  };
+}
+
+function buildSnapshot(input: SettingsSnapshot): string {
+  return JSON.stringify({
+    user: input.user.trim().replace(/^@+/, "").toLowerCase(),
+    ai_provider: input.ai_provider,
+    notification_prefs: input.notification_prefs,
+  });
 }
 
 export function SettingsScreen() {
   const [activeModel, setActiveModel] = useState("claude");
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
   const [userInput, setUserInput] = useState("");
-  const [savingUser, setSavingUser] = useState(false);
-  const [userMessage, setUserMessage] = useState<string | null>(null);
-  const [userError, setUserError] = useState<string | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState("");
   const [platforms, setPlatforms] = useState<PlatformConnection[]>([]);
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
@@ -107,14 +120,24 @@ export function SettingsScreen() {
 
   useEffect(() => {
     void getProfile().then((result) => {
-      if (!result) return;
+      if (!result) {
+        setProfileLoadError("Could not load your profile. Sign in again and retry.");
+        return;
+      }
+      const settings = normalizeSettings(result.settings);
+      const user = result.user ?? result.handle;
       setProfile(result);
-      setUserInput(result.user ?? result.handle);
+      setUserInput(user);
+      setActiveModel(settings.ai_provider);
+      setNotificationPrefs(settings.notification_prefs);
+      setSavedSnapshot(
+        buildSnapshot({
+          user,
+          ai_provider: settings.ai_provider,
+          notification_prefs: settings.notification_prefs,
+        }),
+      );
     });
-  }, []);
-
-  useEffect(() => {
-    setNotificationPrefs(loadNotificationPrefs());
   }, []);
 
   useEffect(() => {
@@ -164,42 +187,54 @@ export function SettingsScreen() {
     }
   };
 
-  const handleSaveUser = async () => {
-    const trimmed = userInput.trim().replace(/^@+/, "");
-    if (!trimmed) {
-      setUserError("User name is required.");
+  const handleSaveSettings = async () => {
+    const trimmedUser = userInput.trim().replace(/^@+/, "");
+    if (!trimmedUser) {
+      setSaveError("User name is required.");
       return;
     }
 
-    setSavingUser(true);
-    setUserError(null);
-    setUserMessage(null);
+    setSavingSettings(true);
+    setSaveError(null);
+    setSaveMessage(null);
     try {
-      const updated = await updateUser(trimmed);
+      const updated = await saveCreatorSettings({
+        user: trimmedUser,
+        ai_provider: activeModel,
+        notification_prefs: notificationPrefs,
+      });
+      const user = updated.user ?? updated.handle;
       setProfile(updated);
-      setUserInput(updated.user);
-      setUserMessage("User name updated.");
+      setUserInput(user);
+      const settings = normalizeSettings(updated.settings);
+      setActiveModel(settings.ai_provider);
+      setNotificationPrefs(settings.notification_prefs);
+      setSavedSnapshot(
+        buildSnapshot({
+          user,
+          ai_provider: settings.ai_provider,
+          notification_prefs: settings.notification_prefs,
+        }),
+      );
+      setSaveMessage("Settings saved.");
     } catch (error) {
-      setUserError(error instanceof Error ? error.message : "Failed to update user name.");
+      setSaveError(error instanceof Error ? error.message : "Failed to save settings.");
     } finally {
-      setSavingUser(false);
+      setSavingSettings(false);
     }
   };
 
-  const userChanged =
-    profile !== null &&
-    trimmedUser(userInput) !== (profile.user ?? profile.handle);
-
-  function trimmedUser(value: string) {
-    return value.trim().replace(/^@+/, "").toLowerCase();
-  }
+  const settingsDirty =
+    buildSnapshot({
+      user: userInput,
+      ai_provider: activeModel,
+      notification_prefs: notificationPrefs,
+    }) !== savedSnapshot;
 
   const toggleNotification = (id: NotificationPrefId) => {
-    setNotificationPrefs((current) => {
-      const next = { ...current, [id]: !current[id] };
-      window.localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(next));
-      return next;
-    });
+    setNotificationPrefs((current) => ({ ...current, [id]: !current[id] }));
+    setSaveError(null);
+    setSaveMessage(null);
   };
 
   return (
@@ -208,6 +243,24 @@ export function SettingsScreen() {
         <h1 className="mb-1 text-[1.65rem] font-extrabold text-white">Settings</h1>
         <p className="text-sm text-[#717182]">Manage your account, AI providers, and integrations</p>
       </div>
+
+      {profileLoadError ? (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          {profileLoadError}
+        </div>
+      ) : null}
+
+      {saveError ? (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          {saveError}
+        </div>
+      ) : null}
+
+      {saveMessage ? (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+          {saveMessage}
+        </div>
+      ) : null}
 
       <div className="rounded-2xl border border-white/5 bg-[#0F0F1C] p-5">
         <div className="mb-1 flex items-center gap-2">
@@ -227,7 +280,11 @@ export function SettingsScreen() {
             <button
               key={m.id}
               type="button"
-              onClick={() => setActiveModel(m.id)}
+              onClick={() => {
+                setActiveModel(m.id);
+                setSaveMessage(null);
+                setSaveError(null);
+              }}
               className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3 transition-all ${
                 activeModel === m.id
                   ? "border-violet-500/35 bg-violet-500/10"
@@ -257,7 +314,8 @@ export function SettingsScreen() {
       <div className="rounded-2xl border border-white/5 bg-[#0F0F1C] p-5">
         <h3 className="mb-1 text-sm font-bold text-white">Connected Platforms</h3>
         <p className="mb-4 text-xs text-[#717182]">
-          Connect real accounts via OAuth. Add provider credentials to <code className="text-violet-300">api/.env.local</code> to enable each platform.
+          Connect real accounts via OAuth. Add provider credentials to{" "}
+          <code className="text-violet-300">api/.env.local</code> to enable each platform.
         </p>
 
         {platformMessage ? (
@@ -368,42 +426,26 @@ export function SettingsScreen() {
             <label htmlFor="settings-user" className="mb-2 block text-xs text-[#717182]">
               User
             </label>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                <span className="mr-1 text-sm text-violet-300">@</span>
-                <input
-                  id="settings-user"
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => {
-                    setUserInput(e.target.value.replace(/^@+/, ""));
-                    setUserError(null);
-                    setUserMessage(null);
-                  }}
-                  placeholder="your.name"
-                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#717182]"
-                  autoComplete="username"
-                  spellCheck={false}
-                />
-              </div>
-              <button
-                type="button"
-                disabled={savingUser || !userChanged}
-                onClick={() => void handleSaveUser()}
-                className="rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {savingUser ? "Saving..." : "Save"}
-              </button>
+            <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+              <span className="mr-1 text-sm text-violet-300">@</span>
+              <input
+                id="settings-user"
+                type="text"
+                value={userInput}
+                onChange={(e) => {
+                  setUserInput(e.target.value.replace(/^@+/, ""));
+                  setSaveError(null);
+                  setSaveMessage(null);
+                }}
+                placeholder="your.name"
+                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#717182]"
+                autoComplete="username"
+                spellCheck={false}
+              />
             </div>
-            {userError ? (
-              <p className="mt-2 text-xs text-red-300">{userError}</p>
-            ) : userMessage ? (
-              <p className="mt-2 text-xs text-emerald-300">{userMessage}</p>
-            ) : (
-              <p className="mt-2 text-xs text-[#717182]">
-                Your public user name must be unique. Letters, numbers, dots, and underscores only.
-              </p>
-            )}
+            <p className="mt-2 text-xs text-[#717182]">
+              Your public user name must be unique. Letters, numbers, dots, and underscores only.
+            </p>
           </div>
 
           {[
@@ -411,12 +453,26 @@ export function SettingsScreen() {
             { label: "Plan", value: "Pro · $49/mo" },
             { label: "API", value: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1" },
           ].map((row) => (
-            <div key={row.label} className="flex items-center justify-between border-b border-white/5 py-2 last:border-0">
+            <div
+              key={row.label}
+              className="flex items-center justify-between border-b border-white/5 py-2 last:border-0"
+            >
               <span className="text-xs text-[#717182]">{row.label}</span>
               <span className="max-w-[60%] truncate text-sm font-medium text-white">{row.value}</span>
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="sticky bottom-4 flex justify-end">
+        <button
+          type="button"
+          disabled={savingSettings || !settingsDirty}
+          onClick={() => void handleSaveSettings()}
+          className="rounded-full bg-violet-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition-all hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {savingSettings ? "Saving..." : "Save settings"}
+        </button>
       </div>
     </div>
   );

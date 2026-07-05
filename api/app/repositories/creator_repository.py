@@ -116,3 +116,27 @@ class CreatorRepository:
             session.commit()
             session.refresh(profile)
             return profile
+
+    def update_settings_json(
+        self,
+        *,
+        user_id: str,
+        settings_json: dict,
+        handle: str | None = None,
+    ) -> CreatorProfile | None:
+        with self.session_factory() as session:
+            profile = (
+                session.query(CreatorProfile)
+                .filter(CreatorProfile.user_id == user_id)
+                .order_by(CreatorProfile.created_at.desc())
+                .first()
+            )
+            if profile is None:
+                return None
+            if handle is not None:
+                profile.handle = handle
+            profile.settings_json = settings_json
+            session.add(profile)
+            session.commit()
+            session.refresh(profile)
+            return profile

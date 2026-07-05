@@ -5,7 +5,9 @@ from app.repositories.creator_repository import CreatorRepository
 from app.schemas.creator import (
     CreatorProfileCreateRequest,
     CreatorProfileResponse,
+    SaveCreatorSettingsRequest,
 )
+from app.schemas.creator_settings import CreatorSettings, normalize_settings
 
 
 class CreatorService:
@@ -79,8 +81,71 @@ class CreatorService:
             raise LookupError("Creator profile not found.")
         return self._to_response(updated)
 
+    def save_settings(
+        self,
+        *,
+        user_id: str,
+        payload: SaveCreatorSettingsRequest,
+    ) -> CreatorProfileResponse:
+        profile = self.repository.get_profile(user_id=user_id)
+        if profile is None:
+            if not payload.user:
+                raise LookupError("Creator profile not found.")
+            try:
+                handle = normalize_user_handle(payload.user)
+            except ValueError as exc:
+                raise ValueError(str(exc)) from exc
+            if self.repository.handle_is_taken(handle=handle):
+                raise ValueError("That user name is already taken.")
+            if not self.repository.user_exists(user_id=user_id):
+                raise LookupError("User not found.")
+            profile = self.repository.create_profile(
+                user_id=user_id,
+                handle=handle,
+                niche=None,
+                bio=None,
+                target_platforms=[],
+                creator_voice=None,
+                audience_size=None,
+            )
+            current = CreatorSettings()
+        else:
+            current = normalize_settings(profile.settings_json)
+        merged = current.model_dump()
+
+        if payload.notification_prefs is not None:
+            merged["notification_prefs"] = {
+                **current.notification_prefs,
+                **payload.notification_prefs,
+            }
+        if payload.ai_provider is not None:
+            merged["ai_provider"] = payload.ai_provider.strip()
+        if payload.stripe_payout_status is not None:
+            merged["stripe_payout_status"] = payload.stripe_payout_status
+
+        handle = profile.handle
+        if payload.user is not None:
+            try:
+                normalized = normalize_user_handle(payload.user)
+            except ValueError as exc:
+                raise ValueError(str(exc)) from exc
+            if normalized != profile.handle:
+                if self.repository.handle_is_taken(handle=normalized, exclude_user_id=user_id):
+                    raise ValueError("That user name is already taken.")
+                handle = normalized
+
+        updated = self.repository.update_settings_json(
+            user_id=user_id,
+            settings_json=merged,
+            handle=handle if handle != profile.handle else None,
+        )
+        if updated is None:
+            raise LookupError("Creator profile not found.")
+        return self._to_response(updated)
+
     @staticmethod
     def _to_response(profile: CreatorProfile) -> CreatorProfileResponse:
+        settings = normalize_settings(profile.settings_json)
         return CreatorProfileResponse(
             id=profile.id,
             user_id=profile.user_id,
@@ -91,4 +156,5 @@ class CreatorService:
             target_platforms=profile.target_platforms or [],
             creator_voice=profile.creator_voice,
             audience_size=profile.audience_size,
+            settings=settings,
         )

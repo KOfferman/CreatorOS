@@ -90,6 +90,7 @@ class CreatorProfile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     target_platforms: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     creator_voice: Mapped[str | None] = mapped_column(Text, nullable=True)
     audience_size: Mapped[int | None] = mapped_column(nullable=True)
+    settings_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     semantic_embedding: Mapped[list[float] | None] = mapped_column(
         JSON, nullable=True
     )  # Placeholder for future semantic vector storage integration.
