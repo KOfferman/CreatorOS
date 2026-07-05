@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class CreatorProfileCreateRequest(BaseModel):
-    handle: str = Field(min_length=1)
+    user: str = Field(min_length=1, validation_alias=AliasChoices("user", "handle"))
     niche: str | None = None
     bio: str | None = None
     target_platforms: list[str] = Field(default_factory=list)
@@ -13,12 +13,17 @@ class CreatorProfileCreateRequest(BaseModel):
 class CreatorProfileResponse(BaseModel):
     id: str
     user_id: str
+    user: str
     handle: str
     niche: str | None = None
     bio: str | None = None
     target_platforms: list[str] = Field(default_factory=list)
     creator_voice: str | None = None
     audience_size: int | None = None
+
+
+class UpdateUserRequest(BaseModel):
+    user: str = Field(min_length=1)
 
 
 class UpdateNicheRequest(BaseModel):

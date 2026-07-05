@@ -25,7 +25,7 @@ export function ProfileScreen() {
     ).catch(() => undefined);
   }, []);
 
-  const handle = profile?.handle ?? "creator";
+  const username = profile?.user ?? profile?.handle ?? "creator";
   const voiceTags = (profile?.creator_voice ?? "Authentic, Warm, Honest").split(",").map((v) => v.trim());
 
   return (
@@ -38,13 +38,13 @@ export function ProfileScreen() {
         <div className="rounded-2xl border border-white/5 bg-[#0F0F1C] p-6 text-center">
           <div className="relative mb-4 inline-block">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 via-pink-500 to-orange-400 text-3xl font-extrabold uppercase text-white">
-              {handle.charAt(0)}
+              {username.charAt(0)}
             </div>
             <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0F0F1C] bg-emerald-500">
               <Check size={10} className="text-white" />
             </div>
           </div>
-          <h2 className="mb-0.5 text-lg font-bold capitalize text-white">{handle.replace(".", " ")}</h2>
+          <h2 className="mb-0.5 text-lg font-bold text-white">@{username}</h2>
           <p className="mb-3 text-xs text-[#717182]">{profile?.niche ?? "Creator"}</p>
           <div className="mb-5 flex justify-center gap-2">
             <IgIcon size={20} />

@@ -1,5 +1,6 @@
 from database import CreatorProfile
 
+from app.core.user_handle import normalize_user_handle
 from app.repositories.creator_repository import CreatorRepository
 from app.schemas.creator import (
     CreatorProfileCreateRequest,
@@ -16,9 +17,15 @@ class CreatorService:
             raise LookupError("User not found.")
         if self.repository.get_profile(user_id=user_id) is not None:
             raise ValueError("Creator profile already exists for this user.")
+        try:
+            handle = normalize_user_handle(payload.user)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+        if self.repository.handle_is_taken(handle=handle):
+            raise ValueError("That user name is already taken.")
         profile = self.repository.create_profile(
             user_id=user_id,
-            handle=payload.handle,
+            handle=handle,
             niche=payload.niche,
             bio=payload.bio,
             target_platforms=payload.target_platforms,
@@ -55,11 +62,29 @@ class CreatorService:
             raise LookupError("Creator profile not found.")
         return self._to_response(profile)
 
+    def update_user(self, *, user_id: str, user: str) -> CreatorProfileResponse:
+        profile = self.repository.get_profile(user_id=user_id)
+        if profile is None:
+            raise LookupError("Creator profile not found.")
+        try:
+            handle = normalize_user_handle(user)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+        if profile.handle == handle:
+            return self._to_response(profile)
+        if self.repository.handle_is_taken(handle=handle, exclude_user_id=user_id):
+            raise ValueError("That user name is already taken.")
+        updated = self.repository.update_handle(user_id=user_id, handle=handle)
+        if updated is None:
+            raise LookupError("Creator profile not found.")
+        return self._to_response(updated)
+
     @staticmethod
     def _to_response(profile: CreatorProfile) -> CreatorProfileResponse:
         return CreatorProfileResponse(
             id=profile.id,
             user_id=profile.user_id,
+            user=profile.handle,
             handle=profile.handle,
             niche=profile.niche,
             bio=profile.bio,

@@ -9,7 +9,10 @@ import { getSession } from "../../lib/auth";
 import {
   disconnectPlatform,
   getPlatformConnections,
+  getProfile,
   startPlatformConnection,
+  updateUser,
+  type CreatorProfile,
   type PlatformConnection,
 } from "../../lib/api";
 import { IgIcon, TtIcon, YtIcon } from "../ui/platform-icons";
@@ -23,6 +26,11 @@ const PLATFORM_ICONS: Record<string, ReactNode> = {
 
 export function SettingsScreen() {
   const [activeModel, setActiveModel] = useState("claude");
+  const [profile, setProfile] = useState<CreatorProfile | null>(null);
+  const [userInput, setUserInput] = useState("");
+  const [savingUser, setSavingUser] = useState(false);
+  const [userMessage, setUserMessage] = useState<string | null>(null);
+  const [userError, setUserError] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<PlatformConnection[]>([]);
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
@@ -46,6 +54,14 @@ export function SettingsScreen() {
   useEffect(() => {
     void loadPlatforms();
   }, [loadPlatforms]);
+
+  useEffect(() => {
+    void getProfile().then((result) => {
+      if (!result) return;
+      setProfile(result);
+      setUserInput(result.user ?? result.handle);
+    });
+  }, []);
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -93,6 +109,36 @@ export function SettingsScreen() {
       setDisconnectingPlatform(null);
     }
   };
+
+  const handleSaveUser = async () => {
+    const trimmed = userInput.trim().replace(/^@+/, "");
+    if (!trimmed) {
+      setUserError("User name is required.");
+      return;
+    }
+
+    setSavingUser(true);
+    setUserError(null);
+    setUserMessage(null);
+    try {
+      const updated = await updateUser(trimmed);
+      setProfile(updated);
+      setUserInput(updated.user);
+      setUserMessage("User name updated.");
+    } catch (error) {
+      setUserError(error instanceof Error ? error.message : "Failed to update user name.");
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const userChanged =
+    profile !== null &&
+    trimmedUser(userInput) !== (profile.user ?? profile.handle);
+
+  function trimmedUser(value: string) {
+    return value.trim().replace(/^@+/, "").toLowerCase();
+  }
 
   return (
     <div className="space-y-6">
@@ -217,10 +263,51 @@ export function SettingsScreen() {
 
       <div className="rounded-2xl border border-white/5 bg-[#0F0F1C] p-5">
         <h3 className="mb-4 text-sm font-bold text-white">Account</h3>
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="settings-user" className="mb-2 block text-xs text-[#717182]">
+              User
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <span className="mr-1 text-sm text-violet-300">@</span>
+                <input
+                  id="settings-user"
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => {
+                    setUserInput(e.target.value.replace(/^@+/, ""));
+                    setUserError(null);
+                    setUserMessage(null);
+                  }}
+                  placeholder="your.name"
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#717182]"
+                  autoComplete="username"
+                  spellCheck={false}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={savingUser || !userChanged}
+                onClick={() => void handleSaveUser()}
+                className="rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingUser ? "Saving..." : "Save"}
+              </button>
+            </div>
+            {userError ? (
+              <p className="mt-2 text-xs text-red-300">{userError}</p>
+            ) : userMessage ? (
+              <p className="mt-2 text-xs text-emerald-300">{userMessage}</p>
+            ) : (
+              <p className="mt-2 text-xs text-[#717182]">
+                Your public user name must be unique. Letters, numbers, dots, and underscores only.
+              </p>
+            )}
+          </div>
+
           {[
             { label: "Email", value: session?.email ?? "—" },
-            { label: "User ID", value: session?.userId ?? "—" },
             { label: "Plan", value: "Pro · $49/mo" },
             { label: "API", value: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1" },
           ].map((row) => (

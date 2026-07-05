@@ -8,10 +8,12 @@ from app.api.v1.routers.creators import get_creator_service
 @dataclass
 class FakeCreatorService:
     def create_profile(self, *, user_id: str, payload):
+        handle = getattr(payload, "user", None) or payload.handle
         return {
             "id": "profile-1",
             "user_id": user_id,
-            "handle": payload.handle,
+            "user": handle,
+            "handle": handle,
             "niche": payload.niche,
             "bio": payload.bio,
             "target_platforms": payload.target_platforms,
@@ -35,7 +37,7 @@ def test_create_creator_profile_endpoint(client, app, auth_headers):
         "/api/v1/creators",
         headers=auth_headers,
         json={
-            "handle": "creator.handle",
+            "user": "creator.handle",
             "niche": "education",
             "bio": "test bio",
             "target_platforms": ["instagram"],
@@ -46,6 +48,7 @@ def test_create_creator_profile_endpoint(client, app, auth_headers):
     assert response.status_code == 201
     data = response.json()
     assert data["user_id"] == "user-1"
+    assert data["user"] == "creator.handle"
     assert data["handle"] == "creator.handle"
     assert data["target_platforms"] == ["instagram"]
 

@@ -7,6 +7,7 @@ from app.schemas.creator import (
     UpdateCreatorVoiceRequest,
     UpdateNicheRequest,
     UpdateTargetPlatformsRequest,
+    UpdateUserRequest,
 )
 from app.services.creator_service import CreatorService
 
@@ -80,3 +81,17 @@ def update_my_creator_voice(
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.patch("/me/user", response_model=CreatorProfileResponse)
+def update_my_user(
+    payload: UpdateUserRequest,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
+    service: CreatorService = Depends(get_creator_service),
+) -> CreatorProfileResponse:
+    try:
+        return service.update_user(user_id=user.user_id, user=payload.user)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc

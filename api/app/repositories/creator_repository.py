@@ -20,6 +20,13 @@ class CreatorRepository:
                 .first()
             )
 
+    def handle_is_taken(self, *, handle: str, exclude_user_id: str | None = None) -> bool:
+        with self.session_factory() as session:
+            query = session.query(CreatorProfile).filter(CreatorProfile.handle == handle)
+            if exclude_user_id:
+                query = query.filter(CreatorProfile.user_id != exclude_user_id)
+            return query.first() is not None
+
     def create_profile(
         self,
         *,
@@ -89,6 +96,22 @@ class CreatorRepository:
             if profile is None:
                 return None
             profile.creator_voice = creator_voice
+            session.add(profile)
+            session.commit()
+            session.refresh(profile)
+            return profile
+
+    def update_handle(self, *, user_id: str, handle: str) -> CreatorProfile | None:
+        with self.session_factory() as session:
+            profile = (
+                session.query(CreatorProfile)
+                .filter(CreatorProfile.user_id == user_id)
+                .order_by(CreatorProfile.created_at.desc())
+                .first()
+            )
+            if profile is None:
+                return None
+            profile.handle = handle
             session.add(profile)
             session.commit()
             session.refresh(profile)

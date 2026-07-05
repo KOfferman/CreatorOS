@@ -40,6 +40,7 @@ export async function login(email: string, password: string): Promise<AuthTokenR
 export type CreatorProfile = {
   id: string;
   user_id: string;
+  user: string;
   handle: string;
   niche: string | null;
   bio: string | null;
@@ -191,6 +192,13 @@ export async function getProfile(): Promise<CreatorProfile | null> {
   } catch {
     return null;
   }
+}
+
+export async function updateUser(user: string): Promise<CreatorProfile> {
+  return request<CreatorProfile>("/creators/me/user", {
+    method: "PATCH",
+    body: JSON.stringify({ user }),
+  });
 }
 
 /** @deprecated Use getProfile. Kept for compatibility — no longer creates fallback profiles. */
