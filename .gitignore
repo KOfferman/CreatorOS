@@ -53,4 +53,6 @@ creatoros_dev.db
 _figma_design/
 
 # Cursor / tooling
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**

@@ -1,0 +1,50 @@
+---
+description: Always push to GitHub and redeploy Vercel after CreatorOS changes
+alwaysApply: true
+---
+
+# GitHub + Vercel sync (CreatorOS)
+
+After completing meaningful changes in this repo, **always**:
+
+1. **Push to GitHub** on `main` (unless the user asked for a branch/PR only).
+2. **Redeploy Vercel production** so runtime env and code stay in sync.
+
+## Git push
+
+```bash
+git add <changed files>
+git commit -m "<concise message>"
+git push origin main
+```
+
+Remote: `K-Diamonds/CreatorOS` (may redirect from `KOfferman/CreatorOS`).
+
+Do not commit secrets (`.env.local`, credentials). Only commit when there are real changes.
+
+## Vercel deploy
+
+GitHub secrets are **not** auto-available to Vercel. Use the redeploy workflow (syncs env, then deploys):
+
+```bash
+gh workflow run vercel-redeploy.yml --repo K-Diamonds/CreatorOS
+```
+
+Wait for the workflow to finish. Optionally verify:
+
+```bash
+curl -sS https://creator-os-gold.vercel.app/api/v1/health
+```
+
+Expected: `{"status":"ok","environment":"production"}`.
+
+## When to skip
+
+- User explicitly says not to push/deploy
+- Question-only or review-only tasks with no code changes
+- Failed tests — fix first, then push and deploy
+
+## Production notes
+
+- API env vars: synced via `scripts/sync-vercel-env-ci.py` in the redeploy workflow
+- DB migrations: run `cd api && python3 scripts/migrate_db.py` when schema changes (before or right after deploy)
